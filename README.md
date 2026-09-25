@@ -1,123 +1,157 @@
 # Tato Trash Empire
 
-Un idle game de la **Moonlit Tato**: Tato ratonul strânge gunoiul de pe alee și
-îl transformă într-un imperiu de plastic reciclat.
+An idle game from **Moonlit Tato**: Tato the raccoon works the alley, and a
+pile of plastic bags slowly turns into an empire.
 
-HTML, CSS și JavaScript simplu. Fără framework, fără build step, fără
-dependențe la runtime.
+Plain HTML, CSS and JavaScript. No framework, no build step, no runtime
+dependencies.
 
-## Cum îl pornești
+## Play it
 
-```bash
+```
 node serve.js
 ```
 
-Apoi deschizi <http://localhost:8140>. `docs/index.html` merge și deschis
-direct de pe disc, dar service worker-ul (jocul offline) se înregistrează doar
-peste http.
+Then open <http://localhost:8140>. `docs/index.html` also runs straight off
+disk, but the service worker (offline play) only registers over http.
 
-## Cum e pus cap la cap
-
-```
-docs/          tot jocul - se numește "docs" pentru că GitHub Pages publică
-               doar din rădăcina repo-ului sau dintr-un folder cu exact acest nume
-  index.html   scheletul paginii
-  style.css    tot aspectul
-  js/format.js numerele mari: K, M, B, T, AA, AB ... ZZ, AAA
-  js/data.js   TOT ce se poate regla - rânduri, manageri, misiuni, schimburi
-  js/state.js  save-ul (localStorage) și încărcarea lui
-  js/engine.js regulile: producție, cumpărare, misiuni, cufere, offline
-  js/ui.js     ecranele
-  js/main.js   sunetul, ceasul, pornirea
-serve.js       server static minimal, fără dependențe
-```
-
-`ui.js` construiește nodurile o singură dată și după aceea rescrie doar textele
-și lățimile barelor. Dacă ar reconstrui rândurile de zece ori pe secundă s-ar
-pierde animația de tap și poziția de scroll.
-
-## Cum funcționează jocul
-
-### Lanțul
-
-Plasticul (♻️) e scorul. Nimic nu-l produce în afară de pungi:
+## How it is put together
 
 ```
-Bidoane  ->  Sticle  ->  Paie  ->  Pungi  ->  Plastic
+docs/          the whole game - named "docs" because GitHub Pages publishes
+               only from the repository root or a folder with that exact name
+  index.html   the page shell
+  style.css    all of the look
+  js/format.js big numbers: K, M, B, T, AA, AB ... ZZ, AAA
+  js/data.js   EVERYTHING tunable - rows, managers, chests, tasks, deals
+  js/state.js  the save file and how it loads
+  js/engine.js the rules: cycles, assigning, stars, chests, time away
+  js/ui.js     the three screens
+  js/main.js   sound, the clock, boot
+serve.js       a static server with no dependencies
 ```
 
-Fiecare rând produce **unități** din rândul de deasupra lui, nu resursă brută.
-Un bidon cumpărat azi se vede peste câteva minute ca un val de plastic. Efectul
-ăsta de compunere e motorul genului.
+`ui.js` builds its nodes once and then only rewrites text and bar widths.
+Rebuilding the rows fifteen times a second would kill the tap animation and
+the scroll position.
 
-### Ratonii
+## How the game works
 
-Ratonii sunt valuta cu care cumperi tot. Îi primești pe secundă și îi asignezi
-pe rânduri (butonul CUMPĂRĂ). Rata crește din două locuri:
+### The chain
 
-- **praguri de haită** — la 50, 5.000, 500.000 ... de ratoni adunați: +1/sec și
-  x2 la tot;
-- **schimburi** — dai gunoi strâns, primești permanent ratoni/sec.
+Only the bag pile turns into plastic. Every row above it brings back
+**raccoons for the row below** — a straw raccoon comes home dragging a new bag
+raccoon with it.
 
-### Manageri
+```
+Canisters -> Bottles -> Straws -> Bags -> Plastic
+```
 
-Un rând produce singur **doar dacă îi ai managerul**. Până atunci apeși pe
-grămada din stânga și Tato scoate cu mâna cât ar produce rândul în 3 secunde
-(`CFG.clickSeconds`).
+That compounding is the engine of the whole thing. Nobody is hand-buying a
+hundred thousand raccoons one at a time.
 
-Cărțile de manager vin **numai din cufere**. Prima carte a unui manager îl
-angajează (nivel 1, rândul se automatizează); duplicatele îl urcă în nivel, și
-fiecare nivel e x2 viteză.
+### Rows
 
-### Cufere și misiuni
+A row is a pile of trash with raccoons assigned to it. Every cycle the
+assigned raccoons bring back their haul:
 
-Misiunea curentă e sus, cu bara ei. Când o termini, cufărul de lângă ea începe
-să se agite. Recompensa se aplică abia când îl deschizi — așa rândul nou și
-cărțile care îl automatizează ajung în același moment.
+```
+haul per cycle = raccoons on the pile x value
+cycle time     = base / 2^(manager level)
+```
 
-Lista scriptată e în `MISSIONS`. După ea jocul generează misiuni la nesfârșit,
-ca să nu rămâi fără cufere între niveluri.
+| row | brings back | per raccoon, per cycle | cycle by hand | one more raccoon costs | opens at |
+| --- | --- | --- | --- | --- | --- |
+| 🛍️ Plastic Bags | ♻️ plastic | 5 | 3.0s | 🦝 1 + ♻️ 10 | — |
+| 🥤 Plastic Straws | 🛍️ bag raccoons | 8 | 5.0s | 🦝 1 + ♻️ 10 K | 100 raccoons on bags |
+| 🍾 Plastic Bottles | 🥤 straw raccoons | 8 | 8.0s | 🦝 1 + ♻️ 1 M | 5,000 raccoons on straws |
+| 🧴 Plastic Canisters | 🍾 bottle raccoons | 8 | 10.0s | 🦝 1 + ♻️ 100 M | 100,000 raccoons on bottles |
 
-### Praguri de cantitate
+A row's threshold is read on the **previous** product, and a row always opens
+with one raccoon already on it. Prices are flat — the limit is how fast
+raccoons arrive, not an escalating price tag.
 
-Fiecare rând se dublează la 10, 25, 50, 100, 200 ... de unități deținute. De
-asta cumpăratul în bloc (x10, x100, MAX) contează.
+The number on the right of a row is what lands when the bar fills, not a rate:
+a per-second figure means nothing while you are watching a bar crawl. Once a
+cycle drops under `CFG.instantBelow` (0.2s) the bar stops sweeping, reads
+**INSTANT**, and the row switches to showing output per second.
 
-### Offline
+### Raccoons
 
-La revenire se plătesc maximum `CFG.offlineHours` ore, rulate în 120 de pași ca
-lanțul să se compună și cât timp ai fost plecat.
+Raccoons are the workforce and the currency: one per assignment, and they do
+not come back. They arrive on their own at `CFG.ratoniBase` per second, and
+the only way to raise that is the **Scrap Deal** in the Den — every step is a
+flat +1/sec, and the price is what climbs (♻️ 500, then x100 each time). The
+Den tab lights up when you can afford the next one.
 
-## Ce reglezi și unde
+### Managers
 
-Totul stă în `docs/js/data.js`.
+Managers are raccoons: Tato, Grumpy, Scary and Fancy, one per row. Hiring one
+**automates the row and halves its cycle on the spot**; every level after that
+halves it again.
 
-| valoare | ce face |
+| level | costs | bags go from |
+| --- | --- | --- |
+| hired (Lv1) | a card out of a chest | 3.0s -> 1.5s |
+| Lv2 | ⭐ 100 + 🃏 10 | 1.5s -> 0.75s |
+| Lv3 | ⭐ 200 + 🃏 20 | 0.75s -> 0.38s |
+| Lv4 | ⭐ 400 + 🃏 40 | 0.38s -> INSTANT |
+| Lv5 | ⭐ 800 + 🃏 80 | ... |
+
+Cards are per manager and come only out of chests. The first card of a
+manager hires them instead of sitting in the pile.
+
+### Stars
+
+Nothing on screen promises stars. Every x10 raccoons on a pile — 10, 100,
+1,000, 10,000 — drops 1, 2, 4, 8 of them **onto the pile**, and they sit there
+glinting until you tap it. The count under each pile fills up towards its next
+checkpoint.
+
+### Tasks and chests
+
+Three tasks share one band across the top, each with its own chest. Finish one
+and its chest starts shaking; open it and that slot deals the next task, so
+the loop never dries up.
+
+A **Simple Chest** rolls 40-60 ⭐ and 6-12 🃏 spread across the managers whose
+rows are open. Some tasks also guarantee a specific manager, which is how you
+meet each new raccoon right as their row unlocks.
+
+### Time away
+
+Piles with a manager keep working while the game is closed, up to
+`CFG.offlineHours`. A pile you were tapping by hand sits exactly as you left
+it. Progress is saved to `localStorage` every few seconds.
+
+## What to tune, and where
+
+Everything lives in `docs/js/data.js`.
+
+| value | what it does |
 | --- | --- |
-| `CFG.clickSeconds` | câte secunde de producție îți dă un tap |
-| `CFG.offlineHours` | cât din timpul cât ai lipsit se plătește |
-| `CFG.ratoniBase` | ratoni/sec la început |
-| `CFG.startRatoni`, `CFG.startBags` | cu ce pornește un jucător nou |
-| `TIERS[].rate` | cât produce o unitate pe secundă |
-| `TIERS[].cost`, `.growth` | prețul primei unități și cu cât se scumpește |
-| `QTY_STEPS` | pragurile care dublează un rând |
-| `cardsForLevel()` | câte cărți costă nivelul următor de manager |
-| `MISSIONS` | misiunile scriptate, cufărul lor, ce deblochează |
-| `RAT_MILESTONES` | pragurile de haită |
-| `TRADES` | schimburile: ce costă, cât dau, când apar |
+| `TIERS[].value` | units one raccoon brings back per cycle |
+| `TIERS[].cycleBase` | seconds for one collection, by hand |
+| `TIERS[].cost` | flat price of one more raccoon on that row |
+| `TIERS[].unlockAt` | raccoons needed on the row above |
+| `CFG.instantBelow` | when a cycle stops being drawn and reads INSTANT |
+| `CFG.ratoniBase` | raccoons per second before any deal |
+| `CFG.offlineHours` | how much time away is paid out |
+| `starThreshold` / `starReward` | the silent star checkpoints |
+| `starsForLevel` / `cardsForLevel` | what a manager level costs |
+| `CHESTS` | what each kind of chest rolls |
+| `MISSIONS` | the task ladder and which chests grant which manager |
+| `TRADES` | the Den deals |
 
-Adaugi un rând nou punând un obiect în `TIERS`, un manager pentru el în
-`MANAGERS` și o misiune cu `unlock: '<id-ul rândului>'` în `MISSIONS`. Restul
-se construiește singur.
+A new row is an entry in `TIERS`, a manager for it in `MANAGERS`, and a task
+with `grant: '<manager id>'` in `MISSIONS`. The screens build themselves from
+those tables.
 
-## Nivelul 1 (v1.0)
+## Roadmap
 
-Cartierul de Plastic: pungi, paie, sticle, bidoane. Nivelurile următoare adaugă
-rânduri noi și manageri noi în fondul de cărți.
-
-## De făcut
-
-- onboarding (primele tapuri, explicat în joc)
-- nivelul 2 și o hartă între niveluri
-- artă proprie în loc de emoji
-- ambalare Android cu Capacitor, ca la Wobbly Raccoon
+- onboarding for the first few taps
+- managers that multiply what a raccoon brings back, not just the speed
+- zone 2 with its own currency, sharing the same raccoons
+- a prestige pass: start the zone over, managers keep their levels
+- real art instead of emoji
+- Android packaging with Capacitor, the way Wobbly Raccoon does it

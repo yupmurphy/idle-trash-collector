@@ -41,7 +41,7 @@ const CFG = {
   tickRate:   30,     // production steps per second
   uiRate:     15,     // UI refreshes per second
 
-  ratoniBase: 1,      // raccoons per second before milestones and deals
+  ratoniBase: 1,      // raccoons per second before any deal is bought
 
   // Enough for a handful of assignments, so the first minute moves.
   startRatoni: 10,
