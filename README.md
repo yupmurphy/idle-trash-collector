@@ -147,11 +147,31 @@ A new row is an entry in `TIERS`, a manager for it in `MANAGERS`, and a task
 with `grant: '<manager id>'` in `MISSIONS`. The screens build themselves from
 those tables.
 
+## Art
+
+Two sources, and they do not mix.
+
+The six manager portraits are drawn images in `docs/art/`, one PNG per
+manager, named after its id. Everything else - the round trash icons, the nav
+icons, the chests, and the whole card around the portrait - is inline SVG
+built in `docs/js/art.js` and `docs/js/cards.js`. Nothing is loaded from a
+CDN and there is still no build step.
+
+A portrait comes off a character sheet: all six generated in one image, so
+they read as one hand, then cut apart by `tools/cut-sheet.ps1`. The script
+labels connected shapes, gives each character the props nearest to it, and
+floods the background away from the crop border inward - which is what keeps
+the eye whites, since they are enclosed by the outline, while dropping the
+soft contact shadow, which is not.
+
+Names and effect lines are SVG text over the image, never baked into it, so
+they stay sharp at any size and can be reworded without new art.
+
 ## Roadmap
 
 - onboarding for the first few taps
 - managers that multiply what a raccoon brings back, not just the speed
 - zone 2 with its own currency, sharing the same raccoons
 - a prestige pass: start the zone over, managers keep their levels
-- real art instead of emoji
+- art for the trash rows and the chests, to match the manager portraits
 - Android packaging with Capacitor, the way Wobbly Raccoon does it

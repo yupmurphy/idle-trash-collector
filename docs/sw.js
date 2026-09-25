@@ -1,6 +1,6 @@
 // Offline cache for the web build. Bump CACHE on every release or the
 // browser will happily serve yesterday's game forever.
-const CACHE = 'tato-trash-v3';
+const CACHE = 'tato-trash-v4';
 
 const FILES = [
   '.',
@@ -16,6 +16,13 @@ const FILES = [
   'js/engine.js',
   'js/ui.js',
   'js/main.js',
+  // manager portraits - without these the cards come up empty offline
+  'art/mgr_tato.png',
+  'art/mgr_grumpy.png',
+  'art/mgr_scary.png',
+  'art/mgr_fancy.png',
+  'art/mgr_scrapper.png',
+  'art/mgr_baron.png',
 ];
 
 self.addEventListener('install', function (e) {

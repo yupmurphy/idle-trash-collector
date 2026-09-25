@@ -565,7 +565,10 @@ body {
 /* not hired yet: you can see who he is and what he does, but the card
    will not open */
 .card.locked { cursor: default; }
-.card.locked svg { filter: grayscale(1) brightness(.5); }
+/* Only the portrait greys out. The frame and the rarity label keep their
+   colour, so you can see which rarity is still missing, and the name stays
+   readable through the overlay. */
+.card.locked .card-art { filter: grayscale(1) brightness(.62); }
 .card.locked .card-lock { display: grid; }
 
 .card.up-ready { animation: card-glow 1.4s infinite; }

@@ -482,11 +482,11 @@ const UI = (function () {
         n.fill.setAttribute('width', 0);
       } else if (mgr.passive) {
         n.lvl.textContent = 'Lv ' + lvl + ' · x' + Fmt.n(passiveMultFor(lvl));
-        n.fill.setAttribute('width', (Math.min(1, S.cards[mgr.id] / Engine.upCards(mgr.id)) * 232).toFixed(1));
+        n.fill.setAttribute('width', (Math.min(1, S.cards[mgr.id] / Engine.upCards(mgr.id)) * CARDS.BAR_W).toFixed(1));
       } else {
         const mt = Engine.tier(mgr.tier);
         n.lvl.textContent = 'Lv ' + lvl + ' · ' + (Engine.isInstant(mt) ? 'INSTANT' : Fmt.secs(Engine.cycleTime(mt)));
-        n.fill.setAttribute('width', (Math.min(1, S.cards[mgr.id] / Engine.upCards(mgr.id)) * 232).toFixed(1));
+        n.fill.setAttribute('width', (Math.min(1, S.cards[mgr.id] / Engine.upCards(mgr.id)) * CARDS.BAR_W).toFixed(1));
       }
     });
     el['mgr-owned'].textContent = owned + ' / ' + MANAGERS.length;
@@ -622,6 +622,20 @@ const UI = (function () {
       '</button>' +
       '<button class="btn btn-ghost" data-close>BACK</button>'
     );
+
+    // The card in the modal is its own copy, so nothing on the grid refreshes
+    // it - fill its level line and its bar once, here, or it opens blank.
+    const pLvl  = box.querySelector('.modal-portrait .card-lvl-text');
+    const pFill = box.querySelector('.modal-portrait .card-bar-fill');
+    if (pLvl && pFill) {
+      pLvl.textContent = lvl > 0
+        ? 'Lv ' + lvl + ' · ' + (m.passive
+            ? 'x' + Fmt.n(passiveMultFor(lvl))
+            : (Engine.isInstant(t) ? 'INSTANT' : Fmt.secs(Engine.cycleTime(t))))
+        : (m.passive && S.level < m.fromLevel ? 'from level ' + m.fromLevel : 'from chests');
+      pFill.setAttribute('width',
+        (Math.min(1, S.cards[id] / needCards) * CARDS.BAR_W).toFixed(1));
+    }
 
     box.querySelector('[data-up]').addEventListener('click', function () {
       if (Engine.upgrade(id)) {

@@ -22,3 +22,9 @@ Thumbs.db
 
 # local ideas page - notes for me, not for the repo
 IDEAS.md
+
+# local art mockups and reference images - working files, not the build
+docs/_mock/
+references/
+ART-PROMPTS.md
+references/generated/
