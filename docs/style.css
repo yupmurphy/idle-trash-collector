@@ -1,0 +1,725 @@
+/* =====================================================================
+   TATO TRASH EMPIRE - look & feel
+   Night-in-the-alley palette: deep blue dark, moonlit teal, trash green.
+   Chunky cartoon panels with hard outlines and a fat bottom shadow, so
+   everything reads as a pressable plastic button on a phone.
+   ===================================================================== */
+
+:root {
+  --bg:        #0e1320;
+  --bg-2:      #131a2b;
+  --panel:     #1c2438;
+  --panel-2:   #232d45;
+  --line:      #0a0e18;
+
+  --teal:      #2fd6a5;
+  --teal-dk:   #12836a;
+  --moon:      #e8f4c8;
+  --lime:      #9ee84f;
+  --lime-dk:   #4d8c1d;
+  --amber:     #ffc247;
+  --amber-dk:  #a86e10;
+  --pink:      #ff6b9d;
+  --blue:      #4aa8ff;
+
+  --text:      #eaf1ff;
+  --muted:     #8fa0c0;
+
+  --r:   14px;
+  --r-s: 10px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, "Trebuchet MS", sans-serif;
+  font-weight: 700;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  /* the alley: a faint moon glow at the top, grime at the bottom */
+  background:
+    radial-gradient(120% 60% at 50% -10%, #223055 0%, transparent 60%),
+    var(--bg);
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  height: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  background: var(--bg-2);
+  box-shadow: 0 0 0 1px #000, 0 0 40px #000;
+}
+
+.hidden { display: none !important; }
+.muted  { color: var(--muted); font-size: 12px; }
+
+/* ------------------------------ HEADER ------------------------------ */
+#top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: linear-gradient(#26314d, #1a2236);
+  border-bottom: 3px solid var(--line);
+}
+
+.avatar {
+  position: relative;
+  width: 52px; height: 52px;
+  flex: 0 0 52px;
+  border-radius: var(--r-s);
+  background: linear-gradient(#3d4f7d, #212b45);
+  border: 3px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+}
+.avatar-badge {
+  position: absolute; top: -8px; right: -8px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 2px solid var(--line);
+  display: grid; place-items: center;
+  font-size: 13px; color: #fff;
+}
+
+.wallet { flex: 1; display: flex; gap: 6px; min-width: 0; }
+
+.coin {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 3px solid var(--line);
+  background: linear-gradient(#36436a, #222c46);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.coin-ico { font-size: 15px; flex: 0 0 auto; }
+.coin-val { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.coin-sub { color: var(--teal); font-size: 10px; margin-left: auto; flex: 0 0 auto; }
+.coin-rat     { background: linear-gradient(#3c5a4e, #1e3329); flex: 1.7; }
+.coin-star    { background: linear-gradient(#6a5a2a, #3d3216); }
+.coin-card    { background: linear-gradient(#4a3a6a, #271e3d); }
+
+/* --------------------------- SCORE STRIP ---------------------------- */
+#score-strip {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 12px;
+  background: linear-gradient(#17324a, #102232);
+  border-bottom: 3px solid var(--line);
+}
+.score-ico  { font-size: 20px; }
+.score-val  {
+  flex: 1; min-width: 0;
+  font-size: 22px;
+  color: var(--moon);
+  text-shadow: 0 2px 0 var(--line);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.score-rate { font-size: 12px; color: var(--teal); flex: 0 0 auto; }
+
+.icon-btn {
+  flex: 0 0 40px;
+  width: 40px; height: 40px;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: linear-gradient(#36436a, #222c46);
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* ------------------------------ TASKS ------------------------------- */
+/* One band, three chests side by side. Each column is a task with its
+   own chest sitting on top of it. */
+#tasks {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  background: linear-gradient(#1f2a42, #182034);
+  border-bottom: 3px solid var(--line);
+}
+.task {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 5px 7px;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: linear-gradient(#26314d, #1a2236);
+}
+.task.done { background: linear-gradient(#2d4a3a, #1b3026); }
+
+.task-text {
+  width: 100%;
+  font-size: 9px;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--text);
+  height: 2.5em;
+  overflow: hidden;
+}
+.task-count { font-size: 9px; color: var(--muted); font-weight: 600; }
+.task-bar   { width: 100%; height: 8px; }
+.task.done .task-text { color: var(--lime); }
+
+.task-chest {
+  width: 100%;
+  padding: 5px 0;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: linear-gradient(#3b4666, #232c44);
+  font: inherit; font-size: 19px;
+  line-height: 1;
+  filter: grayscale(1) opacity(.45);
+  cursor: not-allowed;
+}
+.task-chest:not([disabled]) {
+  background: linear-gradient(var(--amber), var(--amber-dk));
+  filter: none;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(255, 194, 71, .45);
+  animation: chest-shake 1.6s infinite;
+}
+
+.bar {
+  height: 12px;
+  border-radius: 999px;
+  background: #0d1220;
+  border: 2px solid var(--line);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: repeating-linear-gradient(115deg, var(--lime) 0 10px, var(--lime-dk) 10px 20px);
+  transition: width .18s linear;
+}
+
+@keyframes chest-shake {
+  0%, 70%, 100% { transform: rotate(0) }
+  75% { transform: rotate(-6deg) scale(1.05) }
+  80% { transform: rotate(6deg)  scale(1.05) }
+  85% { transform: rotate(-4deg) scale(1.03) }
+  90% { transform: rotate(4deg)  scale(1.03) }
+}
+
+/* ------------------------------ PAGES ------------------------------- */
+#pages { flex: 1; min-height: 0; position: relative; }
+.page {
+  position: absolute; inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px 10px 18px;
+}
+
+.zone-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 10px;
+  font-size: 13px;
+}
+.section-h { font-size: 13px; margin: 16px 0 6px; color: var(--moon); }
+.section-p { font-size: 11px; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+.foot-note {
+  margin-top: 14px; text-align: center;
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  line-height: 1.5;
+}
+
+.bulk { display: flex; gap: 4px; flex: 0 0 auto; }
+.bulk-btn {
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 3px solid var(--line);
+  background: #29334e;
+  color: var(--muted);
+  font: inherit; font-size: 11px;
+  cursor: pointer;
+}
+.bulk-btn.on {
+  background: linear-gradient(var(--teal), var(--teal-dk));
+  color: #04241c;
+}
+
+/* ------------------------------- ROWS ------------------------------- */
+.row {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: var(--r);
+  border: 3px solid var(--line);
+  background: linear-gradient(var(--panel-2), var(--panel));
+  box-shadow: 0 5px 0 var(--line);
+}
+
+/* the tappable pile of trash on the left, with the count of raccoons
+   working it and the lifetime haul underneath */
+.row-left { flex: 0 0 76px; width: 76px; display: flex; flex-direction: column; gap: 5px; }
+
+.row-tap {
+  position: relative;
+  height: 72px;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: radial-gradient(circle at 50% 35%, #3c5f7f, #1b2c3d);
+  display: grid; place-items: center;
+  font-size: 34px;
+  cursor: pointer;
+  transition: transform .06s;
+}
+.row-tap:active { transform: scale(.93); }
+.row-tap.auto   { cursor: default; background: radial-gradient(circle at 50% 35%, #2f6a63, #16302f); }
+
+/* stars land on the pile and wait there to be picked up */
+.row-stars {
+  position: absolute; left: -8px; top: -9px;
+  display: flex; align-items: center; gap: 2px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: linear-gradient(var(--amber), var(--amber-dk));
+  border: 3px solid var(--line);
+  color: #2b1c00;
+  font-size: 11px;
+  box-shadow: 0 0 12px rgba(255, 194, 71, .6);
+  animation: nudge 1s infinite;
+}
+
+.row-tap-hint {
+  position: absolute; bottom: -6px; right: -6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--amber);
+  border: 2px solid var(--line);
+  color: #2b1c00;
+  font-size: 9px;
+  animation: nudge 1.1s infinite;
+}
+/* a run is already out - the pile will not take another tap yet */
+.row-tap-hint.busy {
+  background: #3b4666;
+  color: var(--muted);
+  animation: none;
+}
+@keyframes nudge {
+  0%, 100% { transform: translateY(0) }
+  50%      { transform: translateY(-3px) }
+}
+
+/* how many raccoons are on the pile, filling up to the next star */
+.row-stock {
+  position: relative;
+  text-align: center;
+  font-size: 12px;
+  padding: 3px 2px;
+  border-radius: 999px;
+  background: #0d1220;
+  border: 2px solid var(--line);
+  overflow: hidden;
+}
+.row-stock-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 0%;
+  background: repeating-linear-gradient(115deg, #6b5a22 0 8px, #4a3d16 8px 16px);
+  transition: width .2s linear;
+}
+.row-stock-num {
+  position: relative;
+  color: var(--moon);
+  text-shadow: 0 1px 2px #000;
+}
+
+.row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.row-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
+  font-size: 13px;
+}
+.row-out { font-size: 11px; color: var(--teal); white-space: nowrap; }
+.row-out.idle { color: var(--muted); }
+
+/* the collection bar: one sweep is one cycle */
+.row-bar { position: relative; height: 16px; }
+.row-bar .bar-fill {
+  background: repeating-linear-gradient(115deg, var(--teal) 0 10px, var(--teal-dk) 10px 20px);
+  transition: none;
+}
+.row-timer {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: 10px;
+  color: var(--text);
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+}
+
+/* Too fast to watch: the bar stops sweeping and just glows, so the row
+   reads as a solid stream instead of a strobe light. */
+.row.instant .row-bar .bar-fill {
+  background: linear-gradient(90deg, var(--teal), var(--lime), var(--teal));
+  background-size: 200% 100%;
+  animation: stream 1.1s linear infinite;
+}
+.row.instant .row-timer {
+  color: #06251c;
+  text-shadow: none;
+  letter-spacing: 1px;
+}
+@keyframes stream {
+  from { background-position: 0 0 }
+  to   { background-position: -200% 0 }
+}
+
+/* who is running this pile - the one line that says it is automated */
+.row-mgr {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.row-mgr.on  { background: linear-gradient(#2c5f4f, #18382f); color: var(--teal); }
+.row-mgr.on b { color: var(--moon); font-weight: 700; }
+.row-mgr.off { background: #1a2133; color: var(--muted); }
+
+.buy-btn {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: linear-gradient(var(--lime), var(--lime-dk));
+  color: #16290a;
+  font: inherit; font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--line);
+}
+.buy-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+.buy-btn[disabled] {
+  background: linear-gradient(#3b4666, #273250);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.buy-cost {
+  flex: 0 0 auto;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(10, 14, 24, .28);
+  white-space: nowrap;
+}
+
+/* locked row */
+.row.locked {
+  background: linear-gradient(#1a2032, #141a29);
+}
+.row.locked .row-tap {
+  background: #141a29;
+  filter: grayscale(1);
+  cursor: default;
+}
+.lock-body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
+.lock-title { font-size: 13px; color: var(--muted); }
+.lock-req   { font-size: 11px; color: var(--amber); font-weight: 600; }
+.lock-body .bar-fill {
+  background: repeating-linear-gradient(115deg, var(--amber) 0 10px, var(--amber-dk) 10px 20px);
+}
+
+/* ----------------------------- MANAGERS ----------------------------- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.card {
+  position: relative;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: linear-gradient(var(--panel-2), var(--panel));
+  padding: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--line);
+  overflow: hidden;
+}
+.card.locked { filter: grayscale(.9) brightness(.6); }
+.card-face {
+  position: relative;
+  height: 76px;
+  border-radius: 6px;
+  background: radial-gradient(circle at 50% 30%, #44618a, #1d2a3d);
+  display: grid; place-items: center;
+  font-size: 40px;
+  margin-bottom: 5px;
+}
+/* the accessory is how you tell one raccoon from another until there
+   is real art */
+.card-tag {
+  position: absolute; right: 4px; bottom: 2px;
+  font-size: 17px;
+}
+.card-name { font-size: 10px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-lvl {
+  font-size: 10px; text-align: center; color: var(--amber);
+  margin: 2px 0 4px;
+}
+.card-tier {
+  position: absolute; top: 8px; right: 8px;
+  font-size: 15px;
+}
+.card.up-ready { animation: card-glow 1.4s infinite; }
+@keyframes card-glow {
+  0%,100% { box-shadow: 0 4px 0 var(--line); }
+  50%     { box-shadow: 0 4px 0 var(--line), 0 0 14px var(--lime); }
+}
+
+/* ------------------------------ DEN --------------------------------- */
+.den {
+  border-radius: var(--r);
+  border: 3px solid var(--line);
+  background: linear-gradient(#26364f, #17203a);
+  padding: 10px;
+  box-shadow: 0 5px 0 var(--line);
+}
+.den-art {
+  min-height: 96px;
+  display: flex; flex-wrap: wrap; align-content: center; justify-content: center;
+  gap: 2px;
+  font-size: 22px;
+  line-height: 1;
+}
+.den-caption { margin-top: 6px; text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); }
+
+.mile {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: linear-gradient(var(--panel-2), var(--panel));
+}
+.mile.done { background: linear-gradient(#25493c, #16302a); }
+.mile-ico { font-size: 20px; }
+.mile-body { flex: 1; min-width: 0; }
+.mile-title { font-size: 12px; margin-bottom: 4px; }
+.mile-sub { font-size: 11px; color: var(--muted); font-weight: 600; }
+
+.trade {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: linear-gradient(var(--panel-2), var(--panel));
+  box-shadow: 0 4px 0 var(--line);
+}
+.trade-ico { font-size: 24px; flex: 0 0 34px; text-align: center; }
+.trade-body { flex: 1; min-width: 0; }
+.trade-title { font-size: 12px; }
+.trade-gain { font-size: 11px; color: var(--teal); font-weight: 600; }
+.trade-btn {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: linear-gradient(var(--amber), var(--amber-dk));
+  color: #2b1c00;
+  font: inherit; font-size: 11px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--line);
+  text-align: center;
+  line-height: 1.3;
+}
+.trade-btn[disabled] {
+  background: linear-gradient(#3b4666, #273250);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+/* the next step is within reach - say so loudly, it is easy to miss */
+.trade.ready {
+  border-color: var(--amber);
+  background: linear-gradient(#4a3c1c, #2a2413);
+  animation: trade-glow 1.6s infinite;
+}
+@keyframes trade-glow {
+  0%, 100% { box-shadow: 0 4px 0 var(--line); }
+  50%      { box-shadow: 0 4px 0 var(--line), 0 0 16px rgba(255, 194, 71, .55); }
+}
+.trade-lvl { font-size: 10px; color: var(--muted); font-weight: 600; }
+
+/* ------------------------------- NAV -------------------------------- */
+#nav {
+  display: flex;
+  border-top: 3px solid var(--line);
+  background: linear-gradient(#232d45, #161d2e);
+}
+.nav-btn {
+  position: relative;
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 7px 2px 9px;
+  border: 0;
+  border-right: 3px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.nav-btn:last-child { border-right: 0; }
+.nav-btn span { font-size: 20px; filter: grayscale(1) opacity(.6); }
+.nav-btn b { font-size: 9px; letter-spacing: .5px; }
+.nav-btn.active { background: linear-gradient(#35496e, #1e2941); color: var(--moon); }
+.nav-btn.active span { filter: none; }
+.dot {
+  position: absolute; top: 5px; right: 22%;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--pink); border: 2px solid var(--line);
+}
+
+/* ------------------------------- FX --------------------------------- */
+#fx { position: fixed; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
+.float {
+  position: absolute;
+  font-size: 15px;
+  color: var(--lime);
+  text-shadow: 0 2px 0 var(--line);
+  animation: float-up .9s ease-out forwards;
+}
+@keyframes float-up {
+  0%   { transform: translate(-50%, 0) scale(.8); opacity: 1; }
+  100% { transform: translate(-50%, -70px) scale(1.1); opacity: 0; }
+}
+
+/* stars are never promised in advance, so they announce themselves */
+.star-burst {
+  position: absolute;
+  left: 50%; top: 32%;
+  transform: translate(-50%, -50%);
+  padding: 10px 18px;
+  border-radius: var(--r);
+  border: 3px solid var(--line);
+  background: linear-gradient(var(--amber), var(--amber-dk));
+  color: #2b1c00;
+  font-size: 20px;
+  box-shadow: 0 6px 0 var(--line), 0 0 30px rgba(255, 194, 71, .5);
+  animation: star-pop 1.4s ease-out forwards;
+}
+@keyframes star-pop {
+  0%   { transform: translate(-50%, -50%) scale(.4); opacity: 0; }
+  18%  { transform: translate(-50%, -50%) scale(1.12); opacity: 1; }
+  30%  { transform: translate(-50%, -50%) scale(1); }
+  75%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -120%) scale(.9); opacity: 0; }
+}
+
+/* ------------------------------ MODAL ------------------------------- */
+#modal-root {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(4, 7, 14, .78);
+  display: grid; place-items: center;
+  padding: 16px;
+}
+.modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 86vh;
+  overflow-y: auto;
+  border-radius: var(--r);
+  border: 3px solid var(--line);
+  background: linear-gradient(var(--panel-2), var(--panel));
+  box-shadow: 0 8px 0 var(--line), 0 0 60px #000;
+  padding: 14px;
+  text-align: center;
+  animation: pop .18s ease-out;
+}
+@keyframes pop { from { transform: scale(.88); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+.modal h2 { font-size: 17px; margin-bottom: 4px; color: var(--moon); }
+.modal p  { font-size: 12px; font-weight: 600; color: var(--muted); line-height: 1.5; }
+.modal-cards {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  margin: 12px 0;
+}
+.loot {
+  width: 86px;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: linear-gradient(#3e5480, #1f2a42);
+  padding: 6px;
+  animation: pop .25s ease-out backwards;
+}
+.loot-face { position: relative; font-size: 30px; display: inline-block; }
+.loot-tag  { position: absolute; right: -8px; bottom: -2px; font-size: 14px; }
+.loot-name { font-size: 9px; margin-top: 2px; }
+.loot-qty  { font-size: 11px; color: var(--amber); }
+.loot.new  { background: linear-gradient(#3f7d5f, #1c3d2f); }
+.loot-new-tag { font-size: 8px; color: var(--lime); }
+.loot-stars {
+  font-size: 15px; color: var(--amber);
+  margin: 2px 0 4px;
+}
+
+.modal-big-face {
+  position: relative;
+  width: 110px; height: 110px; margin: 8px auto;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: radial-gradient(circle at 50% 30%, #44618a, #1d2a3d);
+  display: grid; place-items: center;
+  font-size: 56px;
+}
+.big-tag { position: absolute; right: 6px; bottom: 4px; font-size: 26px; }
+.stat-line {
+  display: flex; justify-content: space-between;
+  font-size: 12px; padding: 6px 0;
+  border-bottom: 2px solid #0e1425;
+}
+.stat-line b { color: var(--teal); }
+
+.btn {
+  display: block; width: 100%;
+  margin-top: 12px;
+  padding: 11px;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: linear-gradient(var(--lime), var(--lime-dk));
+  color: #16290a;
+  font: inherit; font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--line);
+}
+.btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--line); }
+.btn[disabled] {
+  background: linear-gradient(#3b4666, #273250);
+  color: var(--muted); cursor: not-allowed;
+}
+.btn-ghost {
+  background: linear-gradient(#36436a, #222c46);
+  color: var(--text);
+}

@@ -1,0 +1,21 @@
+# Claude Code local settings - they contain absolute paths for this machine
+.claude/
+
+# dependencies and native build output, once Capacitor is added
+node_modules/
+android/build/
+android/app/build/
+android/.gradle/
+android/captures/
+android/.idea/
+android/local.properties
+*.iml
+
+# built app - rebuilt from source
+*.apk
+*.aab
+
+# editor / OS noise
+.DS_Store
+Thumbs.db
+.vscode/

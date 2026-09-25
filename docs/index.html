@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Tato Trash Empire</title>
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e1320">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tato Trash Empire">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ------------------------------------------------------------------
+       HEADER - the three things you spend
+  ------------------------------------------------------------------- -->
+  <header id="top">
+    <div id="avatar" class="avatar">
+      <span class="avatar-face">🦝</span>
+      <span id="avatar-badge" class="avatar-badge hidden">!</span>
+    </div>
+
+    <div class="wallet">
+      <div class="coin coin-rat">
+        <span class="coin-ico">🦝</span>
+        <span id="w-ratoni" class="coin-val">0</span>
+        <span id="w-ratrate" class="coin-sub">+0/s</span>
+      </div>
+      <div class="coin coin-star">
+        <span class="coin-ico">⭐</span>
+        <span id="w-stars" class="coin-val">0</span>
+      </div>
+      <div class="coin coin-card">
+        <span class="coin-ico">🃏</span>
+        <span id="w-cards" class="coin-val">0</span>
+      </div>
+    </div>
+
+    <button id="btn-menu" class="icon-btn" aria-label="Menu">☰</button>
+  </header>
+
+  <!-- Plastic is the score and the price of everything, so it gets a
+       strip of its own instead of a chip in the header. -->
+  <section id="score-strip">
+    <span class="score-ico">♻️</span>
+    <span id="w-plastic" class="score-val">0</span>
+    <span id="w-plasticrate" class="score-rate">+0/s</span>
+  </section>
+
+  <!-- Three tasks at a time. A finished one turns into a chest you open
+       right there, and the slot deals the next task. -->
+  <section id="tasks"></section>
+
+  <main id="pages">
+
+    <!-- ============ PAGE 1 : COLLECT ============ -->
+    <section id="page-collect" class="page">
+      <div class="zone-bar">
+        <span id="zone-name">Zone 1</span>
+        <div class="bulk" id="bulk-picker">
+          <button class="bulk-btn" data-bulk="1">x1</button>
+          <button class="bulk-btn" data-bulk="10">x10</button>
+          <button class="bulk-btn" data-bulk="100">x100</button>
+          <button class="bulk-btn" data-bulk="max">MAX</button>
+        </div>
+      </div>
+      <div id="rows"></div>
+      <div class="foot-note">Tap a pile to send the raccoons out once. Hire its manager and they keep going on their own.</div>
+    </section>
+
+    <!-- ============ PAGE 2 : MANAGERS ============ -->
+    <section id="page-managers" class="page hidden">
+      <div class="zone-bar"><span>Raccoon Managers</span><span id="mgr-owned" class="muted">0 / 4</span></div>
+      <div id="mgr-grid" class="card-grid"></div>
+      <div class="foot-note">Cards come out of chests. Stars come from putting raccoons to work. A level costs both, and halves the collection time.</div>
+    </section>
+
+    <!-- ============ PAGE 3 : DEN ============ -->
+    <section id="page-raccoons" class="page hidden">
+      <div class="zone-bar">
+        <span>The Den</span>
+        <span id="rat-rate-big" class="muted">+0 raccoons/sec</span>
+      </div>
+
+      <div class="den">
+        <div class="den-art" id="den-art"></div>
+        <div class="den-caption">Raccoons are the workforce. One of them per assignment, and they never come back.</div>
+      </div>
+
+      <h3 class="section-h">Deals</h3>
+      <p class="section-p">Pay in plastic, get raccoons every second. Forever.</p>
+      <div id="trades"></div>
+    </section>
+
+  </main>
+
+  <nav id="nav">
+    <button class="nav-btn active" data-page="collect"><span>🗑️</span><b>COLLECT</b><i id="nav-col-dot" class="dot hidden"></i></button>
+    <button class="nav-btn" data-page="managers"><span>🃏</span><b>MANAGERS</b><i id="nav-mgr-dot" class="dot hidden"></i></button>
+    <button class="nav-btn" data-page="raccoons"><span>🦝</span><b>DEN</b><i id="nav-den-dot" class="dot hidden"></i></button>
+  </nav>
+
+</div>
+
+<div id="fx"></div>
+<div id="modal-root" class="hidden"></div>
+
+<script src="js/format.js"></script>
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script>
+  // Offline support for the web/PWA build. Skipped inside the native app,
+  // where the files are already local and the cache would only serve stale
+  // copies after a rebuild. Also skipped when opened straight from disk.
+  if (!window.Capacitor &&
+      'serviceWorker' in navigator &&
+      location.protocol.startsWith('http')) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    });
+  }
+</script>
+</body>
+</html>

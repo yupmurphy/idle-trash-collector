@@ -1,0 +1,15 @@
+{
+  "name": "Tato Trash Empire",
+  "short_name": "Tato Trash",
+  "description": "Tato ratonul strange gunoiul aleii. Un idle game de la Moonlit Tato.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1320",
+  "theme_color": "#0e1320",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
