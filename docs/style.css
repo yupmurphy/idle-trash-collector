@@ -61,7 +61,12 @@ body {
   display: flex;
   flex-direction: column;
   padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
-  background: var(--bg-2);
+  /* brick courses behind the alley, barely there but it stops the
+     background reading as a flat app canvas */
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.017) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.017) 0 1px, transparent 1px 52px),
+    radial-gradient(120% 70% at 50% 0%, #1b2440 0%, var(--bg-2) 55%, #0f1523 100%);
   box-shadow: 0 0 0 1px #000, 0 0 40px #000;
 }
 
@@ -80,8 +85,9 @@ body {
 
 .avatar {
   position: relative;
-  width: 52px; height: 52px;
-  flex: 0 0 52px;
+  width: 44px; height: 44px;
+  flex: 0 0 44px;
+  font-size: 24px;
   border-radius: var(--r-s);
   background: linear-gradient(#3d4f7d, #212b45);
   border: 3px solid var(--line);
@@ -106,21 +112,21 @@ body {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 8px;
+  gap: 3px;
+  padding: 5px 7px;
   border-radius: 999px;
   border: 3px solid var(--line);
   background: linear-gradient(#36436a, #222c46);
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
 }
-.coin-ico { font-size: 15px; flex: 0 0 auto; }
+.coin-ico { font-size: 13px; flex: 0 0 auto; }
 .coin-val { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .coin-sub { color: var(--teal); font-size: 10px; margin-left: auto; flex: 0 0 auto; }
 .coin-rat     { background: linear-gradient(#3c5a4e, #1e3329); flex: 1.7; }
-.coin-star    { background: linear-gradient(#6a5a2a, #3d3216); }
-.coin-card    { background: linear-gradient(#4a3a6a, #271e3d); }
+.coin-star    { background: linear-gradient(#6a5a2a, #3d3216); flex: 1.15; }
+.coin-card    { background: linear-gradient(#4a3a6a, #271e3d); flex: .95; }
 
 /* --------------------------- SCORE STRIP ---------------------------- */
 #score-strip {
@@ -142,14 +148,66 @@ body {
 .score-rate { font-size: 12px; color: var(--teal); flex: 0 0 auto; }
 
 .icon-btn {
-  flex: 0 0 40px;
-  width: 40px; height: 40px;
+  flex: 0 0 36px;
+  width: 36px; height: 36px;
   border-radius: var(--r-s);
   border: 3px solid var(--line);
   background: linear-gradient(#36436a, #222c46);
   color: var(--text);
   font-size: 18px;
   cursor: pointer;
+}
+
+/* ------------------------------ RANK -------------------------------- */
+/* One box per chest opened this level. Fill them all and the way out of
+   the level lights up. */
+#rank {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: linear-gradient(#232d45, #1a2236);
+  border-bottom: 3px solid var(--line);
+}
+.rank-level {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--moon);
+  letter-spacing: .5px;
+}
+.rank-boxes {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+}
+.rank-box {
+  flex: 1;
+  height: 14px;
+  border-radius: 3px;
+  background: #0d1220;
+  border: 2px solid var(--line);
+  transition: background .2s;
+}
+.rank-box.on {
+  background: linear-gradient(var(--amber), var(--amber-dk));
+}
+#rank.full .rank-box.on {
+  background: linear-gradient(var(--lime), var(--lime-dk));
+}
+.rank-btn {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: var(--r-s);
+  border: 3px solid var(--line);
+  background: linear-gradient(var(--lime), var(--lime-dk));
+  color: #16290a;
+  font: inherit;
+  font-size: 9px;
+  line-height: 1.15;
+  letter-spacing: .5px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--line);
+  animation: chest-shake 1.6s infinite;
 }
 
 /* ------------------------------ TASKS ------------------------------- */
@@ -191,18 +249,21 @@ body {
 
 .task-chest {
   width: 100%;
-  padding: 5px 0;
+  height: 38px;
+  padding: 3px 6px;
   border-radius: var(--r-s);
   border: 3px solid var(--line);
-  background: linear-gradient(#3b4666, #232c44);
-  font: inherit; font-size: 19px;
+  background: linear-gradient(#2c3552, #1d2438);
+  font: inherit; font-size: 17px;
   line-height: 1;
-  filter: grayscale(1) opacity(.45);
+  display: grid; place-items: center;
   cursor: not-allowed;
 }
+.task-chest svg { display: block; height: 30px; width: auto; }
+.task-lock { opacity: .4; }
 .task-chest:not([disabled]) {
-  background: linear-gradient(var(--amber), var(--amber-dk));
-  filter: none;
+  background: linear-gradient(#5a4a22, #33280f);
+  border-color: var(--amber);
   cursor: pointer;
   box-shadow: 0 0 14px rgba(255, 194, 71, .45);
   animation: chest-shake 1.6s infinite;
@@ -211,15 +272,18 @@ body {
 .bar {
   height: 12px;
   border-radius: 999px;
-  background: #0d1220;
+  background: #090d18;
   border: 2px solid var(--line);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .55);
   overflow: hidden;
 }
 .bar-fill {
+  position: relative;
   height: 100%;
   width: 0%;
   border-radius: 999px;
   background: repeating-linear-gradient(115deg, var(--lime) 0 10px, var(--lime-dk) 10px 20px);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .28);
   transition: width .18s linear;
 }
 
@@ -271,32 +335,46 @@ body {
 /* ------------------------------- ROWS ------------------------------- */
 .row {
   display: flex;
-  gap: 8px;
-  padding: 8px;
-  margin-bottom: 10px;
+  gap: 9px;
+  padding: 9px;
+  margin-bottom: 11px;
   border-radius: var(--r);
   border: 3px solid var(--line);
-  background: linear-gradient(var(--panel-2), var(--panel));
-  box-shadow: 0 5px 0 var(--line);
+  /* a lit top edge and a dark floor: the panel reads as a physical slab
+     instead of a flat rectangle */
+  background:
+    linear-gradient(rgba(255,255,255,.07), rgba(255,255,255,0) 40%),
+    linear-gradient(var(--panel-2), var(--panel));
+  box-shadow: 0 5px 0 var(--line), inset 0 1px 0 rgba(255,255,255,.09);
 }
 
 /* the tappable pile of trash on the left, with the count of raccoons
    working it and the lifetime haul underneath */
 .row-left { flex: 0 0 76px; width: 76px; display: flex; flex-direction: column; gap: 5px; }
 
+/* A round, light-blue disc with the drawn item on it. It goes a deeper
+   blue the moment there are stars waiting to be picked up. */
 .row-tap {
   position: relative;
-  height: 72px;
-  border-radius: var(--r-s);
+  height: 76px;
+  border-radius: 50%;
   border: 3px solid var(--line);
-  background: radial-gradient(circle at 50% 35%, #3c5f7f, #1b2c3d);
+  background:
+    radial-gradient(circle at 50% 22%, #cfe9ff 0%, #8ecbf2 55%, #5aa7d8 100%);
+  box-shadow: inset 0 -5px 10px rgba(20, 60, 100, .35);
   display: grid; place-items: center;
-  font-size: 34px;
   cursor: pointer;
-  transition: transform .06s;
+  transition: transform .08s, background .3s;
 }
-.row-tap:active { transform: scale(.93); }
-.row-tap.auto   { cursor: default; background: radial-gradient(circle at 50% 35%, #2f6a63, #16302f); }
+.row-tap:active { transform: scale(.92); }
+.row-tap.auto   { cursor: default; }
+.row-tap.has-stars {
+  background:
+    radial-gradient(circle at 50% 22%, #6fb3e8 0%, #2f6fae 55%, #17457a 100%);
+  box-shadow: inset 0 -5px 10px rgba(6, 28, 55, .5), 0 0 16px rgba(74, 168, 255, .5);
+}
+.row-emoji { display: block; width: 62px; height: 62px; }
+.row-emoji svg { display: block; width: 100%; height: 100%; }
 
 /* stars land on the pile and wait there to be picked up */
 .row-stars {
@@ -413,12 +491,17 @@ body {
 .buy-btn {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 10px 10px;
   border-radius: var(--r-s);
   border: 3px solid var(--line);
-  background: linear-gradient(var(--lime), var(--lime-dk));
+  /* a sheen across the top half, the way a moulded plastic button
+     catches the light */
+  background:
+    linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,0) 52%),
+    linear-gradient(var(--lime), var(--lime-dk));
   color: #16290a;
   font: inherit; font-size: 13px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .25);
   cursor: pointer;
   box-shadow: 0 3px 0 var(--line);
 }
@@ -459,41 +542,32 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
+/* A portrait card: the raccoon fills the frame, the rarity is the
+   frame's colour, and the name sits under it whether you own him yet
+   or not. */
 .card {
   position: relative;
-  border-radius: var(--r-s);
-  border: 3px solid var(--line);
-  background: linear-gradient(var(--panel-2), var(--panel));
-  padding: 6px;
+  border-radius: 10px;
   cursor: pointer;
-  box-shadow: 0 4px 0 var(--line);
   overflow: hidden;
+  line-height: 0;
 }
-.card.locked { filter: grayscale(.9) brightness(.6); }
-.card-face {
-  position: relative;
-  height: 76px;
-  border-radius: 6px;
-  background: radial-gradient(circle at 50% 30%, #44618a, #1d2a3d);
-  display: grid; place-items: center;
-  font-size: 40px;
-  margin-bottom: 5px;
+.card svg { display: block; width: 100%; height: auto; }
+
+.card-lock {
+  position: absolute; inset: 0;
+  display: none;
+  place-items: center;
+  font-size: 26px;
+  background: rgba(8, 12, 22, .45);
 }
-/* the accessory is how you tell one raccoon from another until there
-   is real art */
-.card-tag {
-  position: absolute; right: 4px; bottom: 2px;
-  font-size: 17px;
-}
-.card-name { font-size: 10px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card-lvl {
-  font-size: 10px; text-align: center; color: var(--amber);
-  margin: 2px 0 4px;
-}
-.card-tier {
-  position: absolute; top: 8px; right: 8px;
-  font-size: 15px;
-}
+
+/* not hired yet: you can see who he is and what he does, but the card
+   will not open */
+.card.locked { cursor: default; }
+.card.locked svg { filter: grayscale(1) brightness(.5); }
+.card.locked .card-lock { display: grid; }
+
 .card.up-ready { animation: card-glow 1.4s infinite; }
 @keyframes card-glow {
   0%,100% { box-shadow: 0 4px 0 var(--line); }
@@ -593,10 +667,11 @@ body {
   cursor: pointer;
 }
 .nav-btn:last-child { border-right: 0; }
-.nav-btn span { font-size: 20px; filter: grayscale(1) opacity(.6); }
+.nav-ico { display: block; width: 24px; height: 24px; color: var(--muted); }
+.nav-ico svg { display: block; width: 100%; height: 100%; }
 .nav-btn b { font-size: 9px; letter-spacing: .5px; }
 .nav-btn.active { background: linear-gradient(#35496e, #1e2941); color: var(--moon); }
-.nav-btn.active span { filter: none; }
+.nav-btn.active .nav-ico { color: var(--teal); }
 .dot {
   position: absolute; top: 5px; right: 22%;
   width: 10px; height: 10px; border-radius: 50%;
@@ -674,27 +749,60 @@ body {
   padding: 6px;
   animation: pop .25s ease-out backwards;
 }
-.loot-face { position: relative; font-size: 30px; display: inline-block; }
-.loot-tag  { position: absolute; right: -8px; bottom: -2px; font-size: 14px; }
-.loot-name { font-size: 9px; margin-top: 2px; }
+.loot-art { border-radius: 8px; overflow: hidden; }
+.loot-art svg { display: block; width: 100%; height: auto; }
+.loot-name { font-size: 9px; margin-top: 3px; }
 .loot-qty  { font-size: 11px; color: var(--amber); }
 .loot.new  { background: linear-gradient(#3f7d5f, #1c3d2f); }
+.loot.rare { border-color: var(--blue); box-shadow: 0 0 14px rgba(74, 168, 255, .55); }
+.loot-rarity { font-size: 8px; color: var(--muted); letter-spacing: .5px; }
+.loot.rare .loot-rarity { color: var(--blue); }
+
+.modal-rarity {
+  font-size: 10px; letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.modal-rarity.rare { color: var(--blue); }
+
+/* a task whose level has no more work in it */
+.task.spent { opacity: .45; }
 .loot-new-tag { font-size: 8px; color: var(--lime); }
 .loot-stars {
   font-size: 15px; color: var(--amber);
   margin: 2px 0 4px;
 }
 
-.modal-big-face {
-  position: relative;
-  width: 110px; height: 110px; margin: 8px auto;
-  border-radius: var(--r-s);
-  border: 3px solid var(--line);
-  background: radial-gradient(circle at 50% 30%, #44618a, #1d2a3d);
-  display: grid; place-items: center;
-  font-size: 56px;
+.modal-portrait { width: 176px; margin: 10px auto; }
+.modal-portrait svg { display: block; width: 100%; height: auto; }
+
+/* ---- the chest, and the beat before the loot ---- */
+.chest-stage {
+  width: 118px; margin: 16px auto 6px;
 }
-.big-tag { position: absolute; right: 6px; bottom: 4px; font-size: 26px; }
+.chest-stage svg { display: block; width: 100%; height: auto; overflow: visible; }
+/* The hinge is the back edge of the box, across the middle of the lid's
+   base, in viewBox units. The lid tilts backwards and away in
+   perspective - a chest with a lock on the front never opens sideways. */
+.chest-stage .chest-lid {
+  transform-origin: 40px 34px;
+  transition: transform .5s cubic-bezier(.34, 1.4, .64, 1);
+}
+/* blurred, or the flat circle reads as a second lid behind the chest */
+.chest-stage .chest-glow { opacity: 0; filter: blur(9px); transition: opacity .4s; }
+/* Squashed down onto the box rim it is hinged to, and lifted a touch,
+   so it reads as a slab leaning back behind the open box. It is drawn
+   behind the front wall, so the dark inside shows in front of it. */
+.chest-stage.open .chest-lid { transform: translateY(-10px) scaleY(.34); }
+.chest-stage.open .chest-glow { opacity: 1; animation: chest-pulse 1.4s ease-out infinite; }
+@keyframes chest-pulse {
+  0%, 100% { opacity: .5; transform: scale(1); }
+  50%      { opacity: 1;  transform: scale(1.12); }
+}
+
+/* everything under the chest waits for the lid */
+.pending { opacity: 0; pointer-events: none; }
+.modal-cards, .loot-stars, .modal .btn { transition: opacity .3s; }
 .stat-line {
   display: flex; justify-content: space-between;
   font-size: 12px; padding: 6px 0;
@@ -723,3 +831,27 @@ body {
   background: linear-gradient(#36436a, #222c46);
   color: var(--text);
 }
+
+/* Cheat buttons. Deliberately ugly so nobody mistakes them for the game. */
+.dev-panel {
+  margin-top: 14px;
+  padding: 8px;
+  border: 3px dashed var(--pink);
+  border-radius: var(--r-s);
+  background: rgba(255, 107, 157, .07);
+}
+.dev-title {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--pink);
+  margin-bottom: 6px;
+}
+.dev-btn {
+  margin-top: 6px;
+  padding: 8px;
+  font-size: 11px;
+  background: linear-gradient(#6a3a52, #3d1e2d);
+  color: #ffd9e6;
+  box-shadow: 0 3px 0 var(--line);
+}
+.dev-btn:first-of-type { margin-top: 0; }

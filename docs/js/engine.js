@@ -34,8 +34,14 @@ const Engine = (function () {
   function isInstant(t) { return cycleTime(t) < CFG.instantBelow; }
 
   // What one finished cycle brings back - plastic for the bag row,
-  // raccoons for the row below for everyone else.
-  function haul(t) { return S.assigned[t.id] * t.value; }
+  // raccoons for the row below for everyone else. Passive cards are
+  // folded in HERE, so the number printed on the row is exactly the
+  // number that lands when the bar fills.
+  function haul(t) {
+    let out = S.assigned[t.id] * t.value;
+    if (t.produces === 'plastic') out *= passiveMult('revenue');
+    return out;
+  }
 
   // Output per second while the row is looping.
   function rate(t) {
@@ -68,11 +74,26 @@ const Engine = (function () {
   }
 
   function collect(t, cycles) {
-    const out = S.assigned[t.id] * t.value * cycles;
+    const out = haul(t) * cycles;
     if (out <= 0) return 0;
     S.collected[t.id] += out;
     give(t.produces, out);
     return out;
+  }
+
+  // ------------------------------------------------------------------
+  //  PASSIVE CARDS
+  //  A rare card has no pile. It multiplies one thing, and every level
+  //  of it doubles that multiplier again.
+  // ------------------------------------------------------------------
+  function passiveMult(effect) {
+    let m = 1;
+    MANAGERS.forEach(function (mg) {
+      if (mg.effect === effect && S.mgrLevel[mg.id] > 0) {
+        m *= passiveMultFor(S.mgrLevel[mg.id]);
+      }
+    });
+    return m;
   }
 
   // ------------------------------------------------------------------
@@ -81,9 +102,9 @@ const Engine = (function () {
   // The base trickle, plus every deal ever bought. Deals are the only
   // way this number ever moves.
   function ratoniRate() {
-    let rate = CFG.ratoniBase;
-    TRADES.forEach(function (tr) { rate += tradeGainTotal(tr, S.trades[tr.id]); });
-    return rate;
+    let deals = 0;
+    TRADES.forEach(function (tr) { deals += tradeGainTotal(tr, S.trades[tr.id]); });
+    return CFG.ratoniBase + deals * passiveMult('deal');
   }
 
   // ------------------------------------------------------------------
@@ -255,8 +276,24 @@ const Engine = (function () {
   // ------------------------------------------------------------------
   //  MISSIONS - three live at a time, each with its own chest
   // ------------------------------------------------------------------
+  // A level deals from the same ladder every time, with the resource
+  // targets doubled per level. Targets counted in raccoons on a row are
+  // left alone: those are tied to unlock thresholds, which do not move.
   function missionAt(i) {
-    return i < MISSIONS.length ? MISSIONS[i] : endlessMission(i - MISSIONS.length);
+    if (i >= tasksInLevel(S.level)) return null;   // level's tasks are spent
+    const base = i < MISSIONS.length ? MISSIONS[i] : endlessMission(i - MISSIONS.length);
+    if (S.level === 1 || base.type === 'assign' || base.type === 'manager') return base;
+
+    const scaled = Object.assign({}, base);
+    scaled.amount = base.amount * Math.pow(LEVELS.taskScalePerLevel, S.level - 1);
+    return scaled;
+  }
+
+  // The wording of a task, with its target filled in.
+  function missionText(m) {
+    return m.text.replace('{n}', m.type === 'plastic' || m.type === 'collect'
+      ? Fmt.n(m.amount)
+      : Fmt.whole(m.amount));
   }
 
   function missionProgress(m) {
@@ -270,16 +307,39 @@ const Engine = (function () {
     return 0;
   }
 
-  function missionDone(i) { return missionProgress(missionAt(i)) >= missionAt(i).amount; }
+  function missionDone(i) {
+    const m = missionAt(i);
+    return !!m && missionProgress(m) >= m.amount;
+  }
 
   function readyCount() {
     return S.slots.filter(function (i) { return missionDone(i); }).length;
   }
 
-  // Which managers a chest can roll: anyone whose row is open.
+  // ---- the rank bar -------------------------------------------------
+  function rankFull()   { return S.rankProgress >= rankSlots(S.level); }
+  function rankBoxes()  { return rankSlots(S.level); }
+  function levelDone()  { return S.missionNext >= tasksInLevel(S.level) &&
+                                 S.slots.every(function (i) { return missionAt(i) === null; }); }
+
+  // Which managers a chest can roll: the ones running an open row, plus
+  // any passive card this level has reached. Rarity is a weight, so a
+  // rare card is simply a smaller slice of the same wheel.
   function cardPool() {
-    return MANAGERS.filter(function (m) { return S.unlocked[m.tier]; })
-                   .map(function (m) { return m.id; });
+    return MANAGERS.filter(function (m) {
+      return m.passive ? S.level >= m.fromLevel : S.unlocked[m.tier];
+    });
+  }
+
+  function drawFromPool(pool) {
+    let total = 0;
+    pool.forEach(function (m) { total += RARITY[m.rarity].weight; });
+    let roll = Math.random() * total;
+    for (let i = 0; i < pool.length; i++) {
+      roll -= RARITY[pool[i].rarity].weight;
+      if (roll <= 0) return pool[i].id;
+    }
+    return pool[pool.length - 1].id;
   }
 
   function randInt(lo, hi) {
@@ -289,14 +349,11 @@ const Engine = (function () {
   // Claim the chest sitting on one mission slot, then deal the next
   // mission into that slot. The loot is rolled here, not written into
   // the mission, so every chest of a kind is a fresh roll.
-  function claim(slot) {
-    const idx = S.slots[slot];
-    if (idx === undefined || !missionDone(idx)) return null;
-    const m = missionAt(idx);
-    const chest = CHESTS[m.chest || DEFAULT_CHEST];
-
-    const stars = randInt(chest.stars[0], chest.stars[1]);
-    const cardCount = randInt(chest.cards[0], chest.cards[1]);
+  // Roll one chest of a kind. Loot grows with the level: Z + level x 2%.
+  function rollChest(chest, guarantee) {
+    const bonus = 1 + S.level * LEVELS.lootPerLevel;
+    const stars = Math.round(randInt(chest.stars[0], chest.stars[1]) * bonus);
+    const count = Math.round(randInt(chest.cards[0], chest.cards[1]) * bonus);
 
     const drawn = {}, wasNew = {};
     function draw(mid) {
@@ -306,9 +363,9 @@ const Engine = (function () {
     }
 
     const pool = cardPool();
-    let n = cardCount;
-    if (m.grant) { draw(m.grant); n--; }
-    for (let i = 0; i < n; i++) draw(pool[Math.floor(Math.random() * pool.length)]);
+    let n = count;
+    if (guarantee) { draw(guarantee); n--; }
+    for (let i = 0; i < n; i++) draw(drawFromPool(pool));
 
     // The first card of a raccoon is the raccoon: it hires them at level
     // one instead of sitting in the pile doing nothing.
@@ -322,8 +379,6 @@ const Engine = (function () {
     S.stars += stars;
     S.starsTotal += stars;
 
-    S.slots[slot] = S.missionNext++;
-
     return {
       chest: chest,
       stars: stars,
@@ -331,6 +386,31 @@ const Engine = (function () {
         return { id: mid, qty: drawn[mid], isNew: !!wasNew[mid] };
       }),
     };
+  }
+
+  // Claim the chest sitting on one task, fill a box on the rank bar, and
+  // deal the next task into that slot.
+  function claim(slot) {
+    const idx = S.slots[slot];
+    if (idx === undefined || !missionDone(idx)) return null;
+    const m = missionAt(idx);
+
+    const loot = rollChest(CHESTS[m.chest || DEFAULT_CHEST], m.grant);
+
+    S.rankProgress = Math.min(rankSlots(S.level), S.rankProgress + 1);
+    S.slots[slot] = S.missionNext++;
+
+    return loot;
+  }
+
+  // Cash in a full rank bar: a better chest, then the zone starts over.
+  // Managers, their cards and every star you earned come with you.
+  function rankUp() {
+    if (!rankFull()) return null;
+    const loot = rollChest(CHESTS.rank, null);
+    S.level++;
+    resetZone();
+    return loot;
   }
 
   // ------------------------------------------------------------------
@@ -359,6 +439,26 @@ const Engine = (function () {
 
   function anyUpgradeReady() {
     return MANAGERS.some(function (m) { return canUpgrade(m.id); });
+  }
+
+  // ------------------------------------------------------------------
+  //  DEV HANDOUTS
+  //  Wired to the buttons in the menu, behind CFG.dev. Cards go to every
+  //  manager of that rarity, and a manager who was not hired yet gets
+  //  hired by the first one, same as a chest would do.
+  // ------------------------------------------------------------------
+  function devGive(what, amount) {
+    if (what === 'ratoni') { S.ratoni += amount; S.ratoniTotal += amount; return; }
+    if (what === 'stars')  { S.stars  += amount; S.starsTotal  += amount; return; }
+
+    MANAGERS.forEach(function (m) {
+      if (m.rarity !== what) return;
+      S.cards[m.id] += amount;
+      if (S.mgrLevel[m.id] === 0 && S.cards[m.id] >= 1) {
+        S.mgrLevel[m.id] = 1;
+        S.cards[m.id]--;
+      }
+    });
   }
 
   // ------------------------------------------------------------------
@@ -401,17 +501,19 @@ const Engine = (function () {
     tier: tier, manager: manager, hasManager: hasManager, mgrLevel: mgrLevel,
     cycleTime: cycleTime, isInstant: isInstant, haul: haul, rate: rate, totalRate: totalRate,
     isRunning: isRunning,
-    ratoniRate: ratoniRate,
+    ratoniRate: ratoniRate, passiveMult: passiveMult,
     tick: tick, tap: tap,
     buyQuote: buyQuote, assign: assign, maxAffordable: maxAffordable,
     nextStarAt: nextStarAt, unlockProgress: unlockProgress,
     starProgress: starProgress, takeStars: takeStars,
     tradeCost: tradeCost, tradeGain: tradeGain, tradeGainTotal: tradeGainTotal,
     tradeUnlocked: tradeUnlocked, buyTrade: buyTrade, anyTradeReady: anyTradeReady,
-    missionAt: missionAt, missionProgress: missionProgress, missionDone: missionDone,
+    missionAt: missionAt, missionText: missionText, missionProgress: missionProgress,
+    missionDone: missionDone, rankFull: rankFull, rankBoxes: rankBoxes,
+    levelDone: levelDone, rankUp: rankUp,
     readyCount: readyCount, claim: claim,
     upStars: upStars, upCards: upCards, canUpgrade: canUpgrade, upgrade: upgrade,
     totalCards: totalCards, anyUpgradeReady: anyUpgradeReady,
-    runOffline: runOffline,
+    runOffline: runOffline, devGive: devGive,
   };
 })();

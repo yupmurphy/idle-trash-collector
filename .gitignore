@@ -19,3 +19,6 @@ android/local.properties
 .DS_Store
 Thumbs.db
 .vscode/
+
+# local ideas page - notes for me, not for the repo
+IDEAS.md

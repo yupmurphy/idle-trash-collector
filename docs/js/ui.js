@@ -5,6 +5,22 @@
 //  refresh() touches nothing but text, widths and disabled flags.
 // =====================================================================
 
+const PASSIVE_LABEL = {
+  deal:    'Scrap Deal pays',
+  revenue: 'Plastic from bags',
+};
+
+// Cheat buttons for testing. Shown only while CFG.dev is true; delete
+// this block and the CFG.dev flag to be rid of them.
+const DEV_PANEL =
+  '<div class="dev-panel">' +
+    '<div class="dev-title">DEV</div>' +
+    '<button class="btn dev-btn" data-dev="ratoni" data-amount="100000">+100 K 🦝 raccoons</button>' +
+    '<button class="btn dev-btn" data-dev="stars"  data-amount="10000">+10 K ⭐ stars</button>' +
+    '<button class="btn dev-btn" data-dev="common" data-amount="1000">+1000 🃏 cards on every common</button>' +
+    '<button class="btn dev-btn" data-dev="rare"   data-amount="100">+100 🃏 cards on every rare</button>' +
+  '</div>';
+
 const UI = (function () {
 
   const $ = function (id) { return document.getElementById(id); };
@@ -22,6 +38,7 @@ const UI = (function () {
   // ------------------------------------------------------------------
   function build() {
     ['w-ratoni', 'w-ratrate', 'w-stars', 'w-cards', 'w-plastic', 'w-plasticrate',
+     'rank', 'rank-level', 'rank-boxes', 'btn-rank',
      'tasks', 'rows', 'mgr-grid', 'mgr-owned', 'trades',
      'rat-rate-big', 'den-art', 'zone-name', 'avatar-badge',
      'nav-col-dot', 'nav-mgr-dot', 'nav-den-dot', 'fx', 'modal-root'].forEach(function (id) {
@@ -38,6 +55,28 @@ const UI = (function () {
     refresh();
   }
 
+  // ------------------------------ rank --------------------------------
+  let builtBoxes = -1;
+
+  function refreshRank() {
+    const boxes = Engine.rankBoxes();
+    if (builtBoxes !== boxes) {
+      builtBoxes = boxes;
+      let html = '';
+      for (let i = 0; i < boxes; i++) html += '<i class="rank-box"></i>';
+      el['rank-boxes'].innerHTML = html;
+    }
+    const kids = el['rank-boxes'].children;
+    for (let i = 0; i < kids.length; i++) {
+      kids[i].classList.toggle('on', i < S.rankProgress);
+    }
+
+    const full = Engine.rankFull();
+    el['rank-level'].textContent = 'LEVEL ' + S.level;
+    el['btn-rank'].classList.toggle('hidden', !full);
+    el['rank'].classList.toggle('full', full);
+  }
+
   // ----------------------------- tasks --------------------------------
   function buildTasks() {
     const host = el['tasks'];
@@ -49,7 +88,7 @@ const UI = (function () {
       const node = document.createElement('div');
       node.className = 'task';
       node.innerHTML =
-        '<button class="task-chest" data-slot="' + i + '" disabled>🎁</button>' +
+        '<button class="task-chest" data-slot="' + i + '" disabled></button>' +
         '<div class="task-text"></div>' +
         '<div class="bar task-bar"><div class="bar-fill"></div></div>' +
         '<div class="task-count"></div>';
@@ -78,7 +117,7 @@ const UI = (function () {
       row.innerHTML =
         '<div class="row-left">' +
           '<div class="row-tap" data-tap="' + t.id + '">' +
-            '<span class="row-emoji">' + t.emoji + '</span>' +
+            '<span class="row-emoji">' + ART.item(t.id) + '</span>' +
             '<span class="row-stars hidden">⭐<b>0</b></span>' +
             '<span class="row-tap-hint">TAP</span>' +
           '</div>' +
@@ -145,22 +184,17 @@ const UI = (function () {
 
     MANAGERS.forEach(function (m) {
       const card = document.createElement('div');
-      card.className = 'card locked';
+      card.className = 'card locked ' + m.rarity;
       card.dataset.mgr = m.id;
       card.innerHTML =
-        '<div class="card-tier"></div>' +
-        '<div class="card-face">' + m.face + '<span class="card-tag">' + m.tag + '</span></div>' +
-        '<div class="card-name"></div>' +
-        '<div class="card-lvl"></div>' +
-        '<div class="bar"><div class="bar-fill"></div></div>';
+        CARDS.card(m.id, m.name, m.short, m.rarity) +
+        '<div class="card-lock">🔒</div>';
       host.appendChild(card);
 
       cardNodes[m.id] = {
         root: card,
-        tier: card.querySelector('.card-tier'),
-        name: card.querySelector('.card-name'),
-        lvl:  card.querySelector('.card-lvl'),
-        fill: card.querySelector('.bar-fill'),
+        lvl:  card.querySelector('.card-lvl-text'),
+        fill: card.querySelector('.card-bar-fill'),
       };
     });
   }
@@ -197,6 +231,7 @@ const UI = (function () {
   // ------------------------------------------------------------------
   function wire() {
     document.querySelectorAll('.nav-btn').forEach(function (b) {
+      b.querySelector('.nav-ico').innerHTML = ART.nav(b.dataset.page === 'raccoons' ? 'den' : b.dataset.page);
       b.addEventListener('click', function () { show(b.dataset.page); });
     });
 
@@ -248,7 +283,7 @@ const UI = (function () {
       const card = ev.target.closest('[data-mgr]');
       if (!card) return;
       const id = card.dataset.mgr;
-      if (S.mgrLevel[id] === 0 && S.cards[id] === 0) return;
+      if (S.mgrLevel[id] === 0) return;   // not hired yet: nothing to show
       managerModal(id);
     });
 
@@ -256,6 +291,14 @@ const UI = (function () {
       const btn = ev.target.closest('[data-trade]');
       if (!btn) return;
       if (Engine.buyTrade(btn.dataset.trade)) Sfx.buy(); else Sfx.deny();
+      refresh();
+    });
+
+    el['btn-rank'].addEventListener('click', function () {
+      const loot = Engine.rankUp();
+      if (!loot) return;
+      Sfx.up();
+      rankModal(loot);
       refresh();
     });
 
@@ -298,6 +341,7 @@ const UI = (function () {
     el['w-plastic'].textContent = Fmt.n(S.plastic);
     el['w-plasticrate'].textContent = '+' + Fmt.rate(Engine.totalRate());
 
+    refreshRank();
     refreshTasks();
 
 
@@ -316,12 +360,25 @@ const UI = (function () {
     S.slots.forEach(function (idx, i) {
       const n = taskNodes[i];
       const m = Engine.missionAt(idx);
+      if (!m) {
+        // this level has no tasks left - the rank bar is the way on
+        n.root.classList.remove('done');
+        n.root.classList.add('spent');
+        n.text.textContent  = 'Level cleared';
+        n.count.textContent = '';
+        n.chest.innerHTML = '<span class="task-lock">✓</span>';
+        n.chest.disabled = true;
+        n.fill.style.width = '100%';
+        return;
+      }
+      n.root.classList.remove('spent');
+
       const done = Engine.missionDone(idx);
       const prog = Math.min(Engine.missionProgress(m), m.amount);
 
-      n.text.textContent  = m.text;
+      n.text.textContent  = Engine.missionText(m);
       n.count.textContent = Fmt.n(prog) + ' / ' + Fmt.n(m.amount);
-      n.chest.textContent = done ? CHESTS[m.chest || DEFAULT_CHEST].emoji : '🔒';
+      n.chest.innerHTML = done ? ART.chest(m.chest || DEFAULT_CHEST) : '<span class="task-lock">🔒</span>';
       n.fill.style.width  = (prog / m.amount * 100).toFixed(1) + '%';
       n.root.classList.toggle('done', done);
       n.chest.disabled = !done;
@@ -355,6 +412,7 @@ const UI = (function () {
       // stars wait on the pile until they are picked up
       const waiting = S.pendingStars[t.id];
       n.stars.classList.toggle('hidden', waiting <= 0);
+      n.tap.classList.toggle('has-stars', waiting > 0);
       if (waiting > 0) n.starsNum.textContent = Fmt.whole(waiting);
 
       const auto = Engine.hasManager(t);
@@ -416,16 +474,19 @@ const UI = (function () {
 
       n.root.classList.toggle('locked', !known);
       n.root.classList.toggle('up-ready', Engine.canUpgrade(mgr.id));
-      n.tier.textContent = Engine.tier(mgr.tier).emoji;
-      n.name.textContent = known ? mgr.name : '???';
 
-      if (known) {
+      if (!known) {
+        n.lvl.textContent = mgr.passive && S.level < mgr.fromLevel
+          ? 'from level ' + mgr.fromLevel
+          : 'from chests';
+        n.fill.setAttribute('width', 0);
+      } else if (mgr.passive) {
+        n.lvl.textContent = 'Lv ' + lvl + ' · x' + Fmt.n(passiveMultFor(lvl));
+        n.fill.setAttribute('width', (Math.min(1, S.cards[mgr.id] / Engine.upCards(mgr.id)) * 232).toFixed(1));
+      } else {
         const mt = Engine.tier(mgr.tier);
         n.lvl.textContent = 'Lv ' + lvl + ' · ' + (Engine.isInstant(mt) ? 'INSTANT' : Fmt.secs(Engine.cycleTime(mt)));
-        n.fill.style.width = Math.min(100, S.cards[mgr.id] / Engine.upCards(mgr.id) * 100).toFixed(1) + '%';
-      } else {
-        n.lvl.textContent = 'from chests';
-        n.fill.style.width = '0%';
+        n.fill.setAttribute('width', (Math.min(1, S.cards[mgr.id] / Engine.upCards(mgr.id)) * 232).toFixed(1));
       }
     });
     el['mgr-owned'].textContent = owned + ' / ' + MANAGERS.length;
@@ -451,9 +512,12 @@ const UI = (function () {
       const lvl = S.trades[tr.id];
       const cost = Engine.tradeCost(tr, lvl);
 
-      n.gain.textContent = '+' + Fmt.n(Engine.tradeGain(tr, lvl)) + ' raccoons/sec';
+      // a rare card can multiply what a deal pays - show the real figure
+      const mult = Engine.passiveMult('deal');
+      n.gain.textContent = '+' + Fmt.n(Engine.tradeGain(tr, lvl) * mult) + ' raccoons/sec' +
+                           (mult > 1 ? ' (x' + Fmt.n(mult) + ')' : '');
       n.lvl.textContent  = lvl > 0
-        ? 'Lv ' + lvl + ' · giving +' + Fmt.n(Engine.tradeGainTotal(tr, lvl)) + '/sec'
+        ? 'Lv ' + lvl + ' · giving +' + Fmt.n(Engine.tradeGainTotal(tr, lvl) * mult) + '/sec'
         : 'not bought yet';
       const afford = S.plastic >= cost;
       n.btn.innerHTML = 'PAY<br>♻️ ' + Fmt.whole(cost);
@@ -476,55 +540,83 @@ const UI = (function () {
     el['modal-root'].innerHTML = '';
   }
 
-  function chestModal(loot) {
-    const cards = loot.cards.map(function (l, i) {
+  function lootCards(loot) {
+    return loot.cards.map(function (l, i) {
       const m = Engine.manager(l.id);
-      return '<div class="loot' + (l.isNew ? ' new' : '') + '" style="animation-delay:' + (i * 90) + 'ms">' +
-               '<div class="loot-face">' + m.face + '<span class="loot-tag">' + m.tag + '</span></div>' +
-               '<div class="loot-name">' + m.name + '</div>' +
+      return '<div class="loot ' + m.rarity + (l.isNew ? ' new' : '') +
+               '" style="animation-delay:' + (i * 80) + 'ms">' +
+               '<div class="loot-art">' + CARDS.card(m.id, m.name, m.short, m.rarity) + '</div>' +
                '<div class="loot-qty">x' + l.qty + '</div>' +
                (l.isNew ? '<div class="loot-new-tag">HIRED!</div>' : '') +
              '</div>';
     }).join('');
+  }
 
+  // The chest is shown shut, throws its lid open, and only then do the
+  // cards fly out. Without that beat it reads as a list, not a prize.
+  function openingModal(loot, title, subtitle, buttonText) {
     const box = modal(
-      '<h2>' + loot.chest.emoji + ' ' + loot.chest.name + '</h2>' +
-      '<p>Raccoon cards for the alley</p>' +
-      '<div class="modal-cards">' + cards + '</div>' +
-      (loot.stars ? '<div class="loot-stars">+' + Fmt.n(loot.stars) + ' ⭐</div>' : '') +
-      '<button class="btn" data-close>NICE</button>'
+      '<h2>' + title + '</h2>' +
+      '<p>' + subtitle + '</p>' +
+      '<div class="chest-stage">' + ART.chest(loot.chest.id) + '</div>' +
+      '<div class="modal-cards pending"></div>' +
+      '<div class="loot-stars pending">+' + Fmt.n(loot.stars) + ' ⭐</div>' +
+      '<button class="btn pending" data-close>' + buttonText + '</button>'
     );
+
+    const stage = box.querySelector('.chest-stage');
+    setTimeout(function () { stage.classList.add('open'); Sfx.pick(); }, 260);
+    setTimeout(function () {
+      box.querySelector('.modal-cards').innerHTML = lootCards(loot);
+      box.querySelectorAll('.pending').forEach(function (n) { n.classList.remove('pending'); });
+    }, 640);
+
     box.querySelector('[data-close]').addEventListener('click', function () {
       closeModal();
       refresh();
     });
   }
 
+  function chestModal(loot) {
+    openingModal(loot, loot.chest.name, 'Raccoon cards for the alley', 'NICE');
+  }
+
+  function rankModal(loot) {
+    openingModal(loot, 'LEVEL ' + S.level,
+      'The alley is cleared out and starts again — harder tasks, richer chests.<br>' +
+      'Your raccoons, their cards and every star stay with you.',
+      'LET US GO AGAIN');
+  }
+
   function managerModal(id) {
     const m = Engine.manager(id);
     const lvl = S.mgrLevel[id];
-    const t = Engine.tier(m.tier);
+    const t = m.passive ? null : Engine.tier(m.tier);
     const needStars = Engine.upStars(id);
     const needCards = Engine.upCards(id);
     const can = Engine.canUpgrade(id);
 
     const box = modal(
       '<h2>' + m.name + '</h2>' +
-      '<div class="modal-big-face">' + m.face + '<span class="big-tag">' + m.tag + '</span></div>' +
+      '<div class="modal-rarity ' + m.rarity + '">' + RARITY[m.rarity].name + '</div>' +
+      '<div class="modal-portrait">' + CARDS.card(m.id, m.name, m.short, m.rarity) + '</div>' +
       '<p>' + m.desc + '</p>' +
       '<div style="margin-top:12px">' +
         '<div class="stat-line"><span>Level</span><b>' + lvl + '</b></div>' +
-        '<div class="stat-line"><span>Collection time</span><b>' +
-          (Engine.isInstant(t) ? 'INSTANT' : Fmt.secs(Engine.cycleTime(t))) +
-          ' (by hand ' + Fmt.secs(t.cycleBase) + ')</b></div>' +
-        '<div class="stat-line"><span>' + t.name + ' bring in</span><b>' + OUT_ICON[t.produces] + ' ' +
-          (Engine.isInstant(t) ? Fmt.rate(Engine.rate(t)) : Fmt.n(Engine.haul(t)) + ' per run') +
-          ' ' + OUT_NAME[t.produces] + '</b></div>' +
+        (m.passive
+          ? '<div class="stat-line"><span>' + PASSIVE_LABEL[m.effect] + '</span><b>x' +
+              Fmt.n(passiveMultFor(lvl)) + '</b></div>'
+          : '<div class="stat-line"><span>Collection time</span><b>' +
+              (Engine.isInstant(t) ? 'INSTANT' : Fmt.secs(Engine.cycleTime(t))) +
+              ' (by hand ' + Fmt.secs(t.cycleBase) + ')</b></div>' +
+            '<div class="stat-line"><span>' + t.name + ' bring in</span><b>' + OUT_ICON[t.produces] + ' ' +
+              (Engine.isInstant(t) ? Fmt.rate(Engine.rate(t)) : Fmt.n(Engine.haul(t)) + ' per run') +
+              ' ' + OUT_NAME[t.produces] + '</b></div>') +
         '<div class="stat-line"><span>Cards</span><b>' + Fmt.int(S.cards[id]) + ' / ' + Fmt.int(needCards) + '</b></div>' +
         '<div class="stat-line"><span>Stars</span><b>' + Fmt.n(S.stars) + ' / ' + Fmt.n(needStars) + '</b></div>' +
       '</div>' +
       '<button class="btn" data-up ' + (can ? '' : 'disabled') + '>' +
-        (can ? 'UPGRADE TO Lv' + (lvl + 1) + ' · 2x FASTER'
+        (can ? 'UPGRADE TO Lv' + (lvl + 1) + (m.passive ? ' · 2x STRONGER' : ' · 2x FASTER')
              : 'NEED 🃏 ' + Fmt.int(Math.max(0, needCards - S.cards[id])) +
                ' · ⭐ ' + Fmt.n(Math.max(0, needStars - S.stars))) +
       '</button>' +
@@ -565,10 +657,20 @@ const UI = (function () {
         '<div class="stat-line"><span>Stars earned</span><b>' + Fmt.n(S.starsTotal) + '</b></div>' +
         '<div class="stat-line"><span>Tasks done</span><b>' + S.missionNext + '</b></div>' +
       '</div>' +
+      (CFG.dev ? DEV_PANEL : '') +
       '<button class="btn btn-ghost" data-sound>' + (S.muted ? '🔇 SOUND: OFF' : '🔊 SOUND: ON') + '</button>' +
       '<button class="btn btn-ghost" data-wipe>ERASE PROGRESS</button>' +
       '<button class="btn" data-close>CLOSE</button>'
     );
+
+    box.querySelectorAll('[data-dev]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        Engine.devGive(b.dataset.dev, Number(b.dataset.amount));
+        Sfx.buy();
+        refresh();
+        menuModal();          // reopen so the new totals show
+      });
+    });
 
     box.querySelector('[data-sound]').addEventListener('click', function () {
       S.muted = !S.muted;

@@ -5,62 +5,65 @@
 // =====================================================================
 
 const SAVE_KEY = 'tato-trash-empire';
-const SAVE_VERSION = 4;
+const SAVE_VERSION = 5;
 
 let S = null;
 
-function freshState() {
-  const assigned = {}, collected = {}, unlocked = {}, starSteps = {}, pendingStars = {},
-        progress = {}, running = {}, cards = {}, mgrLevel = {}, trades = {};
+// Everything a single level owns. Ranking up throws this away and calls
+// it again; anything NOT in here survives into the next level.
+function freshZone() {
+  const assigned = {}, collected = {}, unlocked = {}, starSteps = {},
+        pendingStars = {}, progress = {}, running = {}, trades = {};
 
   TIERS.forEach(function (t, i) {
-    assigned[t.id]  = (i === 0) ? 1 : 0;   // the first pile opens with one raccoon
-    collected[t.id] = 0;
-    starSteps[t.id] = 0;
-    pendingStars[t.id] = 0;   // stars won but not picked up yet
-    progress[t.id]  = 0;      // 0..1 through the current collection
-    running[t.id]   = false;  // a hand-started cycle is in flight
-    unlocked[t.id]  = (i === 0);
+    assigned[t.id]     = (i === 0) ? 1 : 0;   // the first pile opens with one raccoon
+    collected[t.id]    = 0;
+    starSteps[t.id]    = 0;
+    pendingStars[t.id] = 0;
+    progress[t.id]     = 0;
+    running[t.id]      = false;
+    unlocked[t.id]     = (i === 0);
   });
-  MANAGERS.forEach(function (m) { cards[m.id] = 0; mgrLevel[m.id] = 0; });
   TRADES.forEach(function (t) { trades[t.id] = 0; });
 
   const slots = [];
   for (let i = 0; i < MISSION_SLOTS; i++) slots.push(i);
 
   return {
-    v: SAVE_VERSION,
-
     ratoni:      CFG.startRatoni,
     ratoniTotal: CFG.startRatoni,
-
     plastic:      CFG.startPlastic,
     plasticTotal: 0,
 
+    assigned: assigned, collected: collected, starSteps: starSteps,
+    pendingStars: pendingStars, progress: progress, running: running,
+    unlocked: unlocked, trades: trades,
+
+    slots: slots,
+    missionNext: MISSION_SLOTS,
+    rankProgress: 0,          // boxes filled on the rank bar
+  };
+}
+
+function freshState() {
+  const cards = {}, mgrLevel = {};
+  MANAGERS.forEach(function (m) { cards[m.id] = 0; mgrLevel[m.id] = 0; });
+
+  return Object.assign({
+    v: SAVE_VERSION,
+
+    // ---- carried between levels ----
+    level:      1,
+    cards:      cards,
+    mgrLevel:   mgrLevel,
     stars:      0,
     starsTotal: 0,
 
-    assigned:  assigned,
-    collected: collected,
-    starSteps: starSteps,
-    pendingStars: pendingStars,
-    progress:  progress,
-    running:   running,
-    unlocked:  unlocked,
-
-    cards:    cards,
-    mgrLevel: mgrLevel,
-    trades:   trades,
-
-    slots:       slots,          // the three missions on screen
-    missionNext: MISSION_SLOTS,  // next one to deal
-    claimed:     [],             // chests won and not yet opened: {slot, mission}
-
-    bulk:     1,       // 1 | 10 | 100 | 'max'
+    bulk:     1,
     muted:    false,
     lastSeen: Date.now(),
     started:  Date.now(),
-  };
+  }, freshZone());
 }
 
 function save() {
@@ -93,8 +96,12 @@ function load() {
     S[k] = Object.assign(base[k], data[k] || {});
   });
   if (!Array.isArray(S.slots) || S.slots.length !== MISSION_SLOTS) S.slots = base.slots;
-  if (!Array.isArray(S.claimed)) S.claimed = [];
   return true;
+}
+
+// Ranking up: throw away the level, keep the player.
+function resetZone() {
+  Object.assign(S, freshZone());
 }
 
 function wipeSave() {

@@ -1,6 +1,6 @@
 // Offline cache for the web build. Bump CACHE on every release or the
 // browser will happily serve yesterday's game forever.
-const CACHE = 'tato-trash-v1';
+const CACHE = 'tato-trash-v3';
 
 const FILES = [
   '.',
@@ -9,6 +9,8 @@ const FILES = [
   'icon.svg',
   'manifest.webmanifest',
   'js/format.js',
+  'js/art.js',
+  'js/cards.js',
   'js/data.js',
   'js/state.js',
   'js/engine.js',

@@ -30,6 +30,9 @@
 // =====================================================================
 
 const CFG = {
+  // Cheat buttons in the menu. Flip to false to hide them for a release.
+  dev: true,
+
   offlineHours: 4,    // how much of the time you were away still counts
 
   // Below this the bar would just strobe, so it is drawn full and
@@ -43,9 +46,10 @@ const CFG = {
 
   ratoniBase: 1,      // raccoons per second before any deal is bought
 
-  // Enough for a handful of assignments, so the first minute moves.
+  // You start with nothing but one raccoon on the bag pile: the first
+  // taps are what buy the second raccoon.
   startRatoni: 10,
-  startPlastic: 50,
+  startPlastic: 0,
 };
 
 // --------------------------------------------------------------------
@@ -106,32 +110,97 @@ function starThreshold(step) { return 10 * Math.pow(10, step); }
 function starReward(step)    { return Math.pow(2, step); }
 
 // --------------------------------------------------------------------
-//  MANAGERS - raccoons. One per row.
-//  Hiring one both automates the row AND halves its cycle on the spot.
-//  Every level after that halves it again.
+//  MANAGERS - raccoons
+//  Common ones run a row: hiring one both automates it AND halves its
+//  cycle on the spot, and every level after that halves it again.
+//  Rare ones run nothing. They sit in the collection and bend a rule of
+//  the whole game for as long as you own them, and every level doubles
+//  what they bend. They join the chest pool at , so the
+//  chests keep changing as the game goes on.
+//
+//  Drop chances come from RARITY below - a rare card is five times
+//  harder to pull than a common one.
 // --------------------------------------------------------------------
 const MANAGERS = [
   {
-    id: 'mgr_tato',   tier: 'bag',    name: 'Tato',           face: '🦝', tag: '🌙',
+    id: 'mgr_tato',   tier: 'bag',    name: 'Tato',           face: '🦝', tag: '🌙', rarity: 'common',
+    short: 'Automates the bag pile',
     desc: 'Runs the <b>bag</b> pile so you never have to tap it again. Every level halves the collection time.'
   },
   {
-    id: 'mgr_grumpy', tier: 'straw',  name: 'Grumpy Raccoon', face: '🦝', tag: '😾',
+    id: 'mgr_grumpy', tier: 'straw',  name: 'Grumpy Raccoon', face: '🦝', tag: '😾', rarity: 'common',
+    short: 'Automates the straw pile',
     desc: 'Runs the <b>straw</b> pile. Hates straws. Collects them anyway, twice as fast per level.'
   },
   {
-    id: 'mgr_scary',  tier: 'bottle', name: 'Scary Raccoon',  face: '🦝', tag: '👻',
+    id: 'mgr_scary',  tier: 'bottle', name: 'Scary Raccoon',  face: '🦝', tag: '👻', rarity: 'common',
+    short: 'Automates the bottle pile',
     desc: 'Runs the <b>bottle</b> pile. Nobody else goes near that dumpster, so the route is always clear.'
   },
   {
-    id: 'mgr_fancy',  tier: 'can',    name: 'Fancy Raccoon',  face: '🦝', tag: '🎩',
+    id: 'mgr_fancy',  tier: 'can',    name: 'Fancy Raccoon',  face: '🦝', tag: '🎩', rarity: 'common',
+    short: 'Automates the canister pile',
     desc: 'Runs the <b>canister</b> pile. Insists on being called a logistics director.'
   },
+
+  // ---- rare, passive. No pile, one rule bent. ----
+  {
+    id: 'mgr_scrapper', name: 'Scrapper', face: '🦝', tag: '🔧',
+    rarity: 'rare', passive: true, effect: 'deal', fromLevel: 2,
+    short: 'Scrap Deal pays double',
+    desc: 'Knows what the yard pays. Every step of the <b>Scrap Deal</b> is worth double, and doubles again with each of his levels.'
+  },
+  {
+    id: 'mgr_baron', name: 'Trash Baron', face: '🦝', tag: '👑',
+    rarity: 'rare', passive: true, effect: 'revenue', fromLevel: 4,
+    short: 'Double plastic from bags',
+    desc: 'Owns the alley on paper. Every bag sold brings in <b>double the plastic</b>, and doubles again with each of his levels.'
+  },
 ];
+
+const RARITY = {
+  common: { name: 'Common', weight: 10, colour: '#8fa0c0' },
+  rare:   { name: 'Rare',   weight: 2,  colour: '#4aa8ff' },
+};
+
+// What one level of a passive card multiplies its effect by.
+function passiveMultFor(level) { return Math.pow(2, level); }
 
 // A manager level costs stars AND duplicate cards.
 function starsForLevel(level) { return 100 * Math.pow(2, level - 1); }  // 100, 200, 400, 800 ...
 function cardsForLevel(level) { return 10 * Math.pow(2, level - 1); }   // 10, 20, 40, 80 ...
+
+// --------------------------------------------------------------------
+//  LEVELS
+//  A level is one run through the zone. Every chest you open fills one
+//  box on the rank bar; fill the bar and RANK UP is yours whenever you
+//  want it. Ranking up wipes the zone and starts it again, harder and
+//  richer - managers, their cards and your stars come with you.
+//
+//  There are always two more tasks in a level than boxes on the bar, so
+//  finishing the level completely is a choice, not a requirement.
+// --------------------------------------------------------------------
+const LEVELS = {
+  slotsBase: 8,     // boxes on the rank bar at level 1
+  slotsMax:  13,    // and the most it ever grows to
+  extraTasks: 2,    // tasks beyond the bar, for anyone who wants them
+
+  // Chests pay Z + (level x 2)% more with every level.
+  lootPerLevel: 0.02,
+
+  // Tasks that count a resource double with every level. Tasks counting
+  // raccoons on a row are left alone - those are tied to the unlock
+  // thresholds, which do not move.
+  taskScalePerLevel: 2,
+};
+
+function rankSlots(level) {
+  return Math.min(LEVELS.slotsMax, LEVELS.slotsBase + level - 1);
+}
+
+function tasksInLevel(level) {
+  return rankSlots(level) + LEVELS.extraTasks;
+}
 
 // --------------------------------------------------------------------
 //  CHESTS
@@ -141,13 +210,19 @@ function cardsForLevel(level) { return 10 * Math.pow(2, level - 1); }   // 10, 2
 // --------------------------------------------------------------------
 const CHESTS = {
   simple: { id: 'simple', name: 'Simple Chest', emoji: '🎁',
-            stars: [40, 60], cards: [6, 12] },
+            stars: [40, 60],   cards: [6, 12] },
+
+  // what ranking up pays out
+  rank:   { id: 'rank',   name: 'Rank Chest',   emoji: '🏆',
+            stars: [200, 320], cards: [24, 36] },
 };
 
 const DEFAULT_CHEST = 'simple';
 
 // --------------------------------------------------------------------
 //  MISSIONS - three on screen at a time
+//  {n} in a text is filled in with that task's target, so a task can be
+//  scaled for a higher level without rewriting its wording.
 //  Each one finished turns into a chest you claim in place, and the
 //  slot deals the next mission off the list.
 //    'plastic'  total plastic ever collected
@@ -157,24 +232,24 @@ const DEFAULT_CHEST = 'simple';
 //    'stars'    stars ever earned
 // --------------------------------------------------------------------
 const MISSIONS = [
-  { type: 'plastic', amount: 100,  grant: 'mgr_tato', text: 'Collect 100 plastic' },
-  { type: 'assign',  tier: 'bag',    amount: 25,   text: 'Put 25 raccoons on bags' },
-  { type: 'collect', tier: 'bag',    amount: 2e3,  text: 'Haul 2,000 plastic out of the bag pile' },
-  { type: 'assign',  tier: 'bag',    amount: 60,   text: 'Put 60 raccoons on bags' },
-  { type: 'plastic', amount: 5e4,   text: 'Collect 50 K plastic' },
-  { type: 'assign',  tier: 'bag',    amount: 100,  grant: 'mgr_grumpy', text: 'Put 100 raccoons on bags' },
-  { type: 'assign',  tier: 'straw',  amount: 10,   text: 'Put 10 raccoons on straws' },
-  { type: 'manager', amount: 2,     text: 'Hire 2 raccoon managers' },
-  { type: 'plastic', amount: 1e7,   text: 'Collect 10 M plastic' },
-  { type: 'assign',  tier: 'straw',  amount: 500,  text: 'Get 500 raccoons on straws' },
-  { type: 'stars',   amount: 500,   text: 'Earn 500 stars' },
-  { type: 'assign',  tier: 'straw',  amount: 5e3,  grant: 'mgr_scary', text: 'Get 5,000 raccoons on straws' },
-  { type: 'assign',  tier: 'bottle', amount: 100,  text: 'Put 100 raccoons on bottles' },
-  { type: 'plastic', amount: 1e11,  text: 'Collect 100 B plastic' },
-  { type: 'assign',  tier: 'bottle', amount: 1e4,  text: 'Get 10,000 raccoons on bottles' },
-  { type: 'assign',  tier: 'bottle', amount: 1e5,  grant: 'mgr_fancy', text: 'Get 100,000 raccoons on bottles' },
-  { type: 'assign',  tier: 'can',    amount: 100,  text: 'Put 100 raccoons on canisters' },
-  { type: 'manager', amount: 4,     text: 'Hire all four managers' },
+  { type: 'plastic', amount: 200,  grant: 'mgr_tato', text: 'Collect {n} plastic' },
+  { type: 'assign',  tier: 'bag',    amount: 50,   text: 'Put {n} raccoons on bags' },
+  { type: 'collect', tier: 'bag',    amount: 4e3,  text: 'Haul {n} plastic out of the bag pile' },
+  { type: 'assign',  tier: 'bag',    amount: 75,   text: 'Put {n} raccoons on bags' },
+  { type: 'plastic', amount: 1e5,   text: 'Collect {n} plastic' },
+  { type: 'assign',  tier: 'bag',    amount: 100,  grant: 'mgr_grumpy', text: 'Put {n} raccoons on bags' },
+  { type: 'assign',  tier: 'straw',  amount: 20,   text: 'Put {n} raccoons on straws' },
+  { type: 'manager', amount: 2,     text: 'Hire {n} raccoon managers' },
+  { type: 'plastic', amount: 2e7,   text: 'Collect {n} plastic' },
+  { type: 'assign',  tier: 'straw',  amount: 1e3,  text: 'Get {n} raccoons on straws' },
+  { type: 'stars',   amount: 1e3,   text: 'Earn {n} stars' },
+  { type: 'assign',  tier: 'straw',  amount: 5e3,  grant: 'mgr_scary', text: 'Get {n} raccoons on straws' },
+  { type: 'assign',  tier: 'bottle', amount: 200,  text: 'Put {n} raccoons on bottles' },
+  { type: 'plastic', amount: 2e11,  text: 'Collect {n} plastic' },
+  { type: 'assign',  tier: 'bottle', amount: 2e4,  text: 'Get {n} raccoons on bottles' },
+  { type: 'assign',  tier: 'bottle', amount: 1e5,  grant: 'mgr_fancy', text: 'Get {n} raccoons on bottles' },
+  { type: 'assign',  tier: 'can',    amount: 200,  text: 'Put {n} raccoons on canisters' },
+  { type: 'manager', amount: 4,     text: 'Hire {n} raccoon managers' },
 ];
 
 // Once the written list runs out the game keeps dealing, so the chests
@@ -182,7 +257,7 @@ const MISSIONS = [
 function endlessMission(index) {
   const amount = 1e14 * Math.pow(100, index);
   return { type: 'plastic', amount: amount,
-           text: 'Collect ' + Fmt.n(amount) + ' plastic' };
+           text: 'Collect {n} plastic' };
 }
 
 const MISSION_SLOTS = 3;
