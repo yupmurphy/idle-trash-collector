@@ -6,7 +6,7 @@
 //  Two families:
 //    ITEM_ART   the round trash icons on the collect rows
 //    NAV_ART    the three tabs along the bottom
-//    chest()    the chests, with a lid the CSS can throw open
+//    pack()     the card packs, with a foil top the CSS can tear off
 //
 //  Manager portraits live in cards.js, which draws a whole card.
 // =====================================================================
@@ -75,72 +75,94 @@ const ART = (function () {
       '</svg>',
   };
 
-  //  One base face, six sets of eyebrows, mouths and props. Keeping the
-  //  skull identical is what makes them read as a family.
   // ------------------------------------------------------------------
+  //  CARD PACKS
+  //  What a finished task pays out. This used to be a treasure chest and
+  //  it was rebuilt four times, because a box has to show its INSIDE to
+  //  look open - which needs perspective, and the browser flattens real
+  //  3D on SVG groups. A pack has no inside. It only has to tear, and a
+  //  tear is a translate and a rotate in the plane of the screen.
+  //
+  //  It also says what it holds: you get raccoon cards, so there are two
+  //  cards printed on the front.
   // ------------------------------------------------------------------
-  //  CHESTS
-  //  The lid is its own group so the CSS can throw it open.
-  // ------------------------------------------------------------------
-  //  Built like the real thing: a plank box, a barrel lid, gold bands
-  //  down the front and round the corners, and a lock plate in the
-  //  middle. Everything outlined in the same dark brown.
-  function chest(o) {
-    const ink = o.ink;
+  //  Flat, face-on, outlined in the same navy as the row icons. The foil
+  //  top is its own group so the CSS can rip it off.
+  function pack(o) {
+    const ink = LINE;
+
+    // ONE tear line, shared by both halves: the foil ends on it and the
+    // body starts on it. Shut, they interlock with no seam; the moment
+    // the foil leaves, the body is already ragged. There is no second
+    // "torn" drawing that could drift out of step with the first.
+    let zig = '';
+    for (let i = 0; i < 5; i++) zig += 'l4.4 3.2l4.4-3.2';
+
+    const TOP  = 'M6 26' + zig + 'V11a5 5 0 0 0-5-5H11a5 5 0 0 0-5 5z';
+    const BODY = 'M6 26' + zig + 'V72a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5z';
 
     return '' +
-      '<svg viewBox="0 0 80 66" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-        '<g class="chest-glow">' +
-          '<circle cx="40" cy="32" r="27" fill="' + o.glow + '" opacity=".35"/>' +
+      '<svg viewBox="0 0 56 82" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<g class="pack-glow">' +
+          '<circle cx="28" cy="40" r="26" fill="' + o.glow + '" opacity=".38"/>' +
         '</g>' +
 
         '<g stroke="' + ink + '" stroke-width="2.6" stroke-linejoin="round">' +
 
-          // ---- lid, FIRST so it sits behind the box ----
-          //  Flat, not domed: a slab reads right when it tilts back and
-          //  foreshortens, where a barrel only ever looks squashed. The
-          //  hinge is the box rim at y=34, so it never floats.
-          '<g class="chest-lid">' +
-            '<rect x="7" y="13" width="66" height="21" rx="2" fill="' + o.lid + '"/>' +
-            '<path d="M10 21h60" stroke="' + o.plank + '" stroke-width="1.8" stroke-linecap="round"/>' +
-            '<rect x="7" y="13" width="66" height="21" rx="2"/>' +
-            '<rect x="7" y="13" width="12" height="21" rx="2" fill="' + o.metal + '"/>' +
-            '<rect x="61" y="13" width="12" height="21" rx="2" fill="' + o.metal + '"/>' +
-            '<rect x="34" y="13" width="12" height="21" fill="' + o.metal + '"/>' +
-            // the lip that overhangs the box when it is shut
-            '<rect x="5" y="29" width="70" height="8" rx="3" fill="' + o.metalHi + '"/>' +
+          // ---- the body, the part that stays ----
+          '<g class="pack-body">' +
+            '<path d="' + BODY + '" fill="' + o.body + '"/>' +
+            // shadow just inside the opening, so the tear has depth
+            '<path d="M6 26' + zig + 'V36H6z" fill="' + o.inside + '" stroke="none" opacity=".5"/>' +
+            // the two cards - the only thing this wrapper has to say
+            '<rect x="13" y="45" width="15" height="21" rx="2.5" fill="' + o.card2 + '"/>' +
+            '<rect x="24" y="41" width="17" height="25" rx="2.5" fill="' + o.card1 + '"/>' +
+            '<circle cx="32.5" cy="50" r="3.4" fill="' + ink + '" stroke="none"/>' +
+            '<path d="M27 61c1.6-4.4 9.4-4.4 11 0z" fill="' + ink + '" stroke="none"/>' +
+            '<path d="' + BODY + '"/>' +
           '</g>' +
 
-          // ---- the inside of the box, only seen once the lid is up ----
-          '<path d="M11 27h58v16H11z" fill="' + o.inside + '"/>' +
-          '<path d="M11 27h58v6H11z" fill="' + o.insideLo + '" stroke="none"/>' +
-
-          // ---- front wall: planks, then the metal over them ----
-          '<rect x="9" y="35" width="62" height="26" rx="3" fill="' + o.body + '"/>' +
-          '<path d="M12 44h56M12 53h56" stroke="' + o.plank + '" stroke-width="1.8" stroke-linecap="round"/>' +
-          '<rect x="9" y="35" width="62" height="26" rx="3"/>' +
-
-          // corner brackets and the band down the middle
-          '<path d="M9 38a3 3 0 0 1 3-3h7v26h-7a3 3 0 0 1-3-3V38z" fill="' + o.metal + '"/>' +
-          '<path d="M61 35h7a3 3 0 0 1 3 3v20a3 3 0 0 1-3 3h-7V35z" fill="' + o.metal + '"/>' +
-          '<rect x="34" y="35" width="12" height="26" fill="' + o.metal + '"/>' +
-
-          // ---- lock plate ----
-          '<rect x="31" y="38" width="18" height="15" rx="3" fill="' + o.metalHi + '"/>' +
-          '<circle cx="40" cy="44" r="2.6" fill="' + ink + '" stroke="none"/>' +
-          '<path d="M38.6 45h2.8l1 5h-4.8z" fill="' + ink + '" stroke="none"/>' +
+          // ---- the foil top, the part that tears away ----
+          '<g class="pack-top">' +
+            '<path d="' + TOP + '" fill="' + o.foil + '"/>' +
+            '<path d="M13 14h30" stroke="' + o.foilHi + '" stroke-width="3.4" stroke-linecap="round"/>' +
+            '<path d="' + TOP + '"/>' +
+          '</g>' +
         '</g>' +
       '</svg>';
   }
 
-  const CHEST_ART = {
-    simple: chest({ ink: '#5a3a22', body: '#9a6b43', plank: '#7d5334', lid: '#a87a4e',
-                    inside: '#4b2f1a', insideLo: '#331f10',
-                    metal: '#f2c14e', metalHi: '#ffd97a', glow: '#ffc247' }),
-    rank:   chest({ ink: '#23324f', body: '#4a6591', plank: '#3a5178', lid: '#5a78a8',
-                    inside: '#22314d', insideLo: '#16223a',
-                    metal: '#9ee84f', metalHi: '#c6f48e', glow: '#9ee84f' }),
+  // The usual rarity ladder - white, green, blue, purple, gold - so a
+  // pack says how good it is before it is torn, in the language every
+  // card game has already taught the player. Common is deliberately the
+  // plainest thing on the screen: no colour to earn, that is the point.
+  //
+  // Only two of these are in use. The rest are here so a new pack tier
+  // is one line in PACK_ART, not a new drawing.
+  const PACK_TONE = {
+    common:    { body: '#dfe6f0', inside: '#9dabc0', foil: '#f4f8fd', foilHi: '#ffffff',
+                 card1: '#8d9bb0', card2: '#6d7b90', glow: '#cfdcec' },
+    uncommon:  { body: '#79b957', inside: '#376a2a', foil: '#9ee84f', foilHi: '#c6f48e',
+                 card1: '#f2f8e8', card2: '#c0d7a4', glow: '#9ee84f' },
+    rare:      { body: '#4a6591', inside: '#1d2c47', foil: '#4ec3ff', foilHi: '#a8f0ff',
+                 card1: '#f4f8fd', card2: '#c6d3e6', glow: '#4aa8ff' },
+    epic:      { body: '#6d4d95', inside: '#2f1d4a', foil: '#b07cff', foilHi: '#d9bcff',
+                 card1: '#f7f2fd', card2: '#d2bfe6', glow: '#b07cff' },
+    legendary: { body: '#c08a34', inside: '#4a3210', foil: '#ffc247', foilHi: '#ffe1a0',
+                 card1: '#fff6e0', card2: '#e8d2a4', glow: '#ffc247' },
   };
+
+  const PACK_ART = {};
+  Object.keys(PACK_TONE).forEach(function (r) { PACK_ART[r] = pack(PACK_TONE[r]); });
+
+  // The two the game deals today. A new tier in PACKS gets its art free
+  // as long as its id is a rarity name.
+  //
+  // Ranking up stops at EPIC on purpose. Legendary is drawn and ready
+  // but is being held back for something else, so nothing in the game
+  // may hand one out until that is decided.
+  PACK_ART.simple = PACK_ART.common;
+  PACK_ART.rank   = PACK_ART.epic;
 
   // ------------------------------------------------------------------
   //  NAV ICONS - small, single-weight, they read at 22px
@@ -176,6 +198,6 @@ const ART = (function () {
   return {
     item:    function (id)   { return ITEM_ART[id] || ''; },
     nav:     function (id)   { return NAV_ART[id] || ''; },
-    chest:   function (kind) { return CHEST_ART[kind] || CHEST_ART.simple; },
+    pack:    function (kind) { return PACK_ART[kind] || PACK_ART.simple; },
   };
 })();

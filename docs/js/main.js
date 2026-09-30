@@ -45,7 +45,7 @@ const Sfx = (function () {
     pick:  function () { beep(420 + Math.random() * 120, 0.07, 'square', 0.04); },
     buy:   function () { seq([520, 700], 60); },
     up:    function () { seq([523, 659, 784, 1047], 70); },
-    chest: function () { seq([392, 523, 659, 784, 1047], 90); },
+    pack: function () { seq([392, 523, 659, 784, 1047], 90); },
     deny:  function () { beep(140, 0.12, 'sawtooth', 0.035); },
     tick:  function () { beep(880, 0.04, 'triangle', 0.03); },
     star:  function () { seq([880, 1175, 1568], 55); },
@@ -78,9 +78,14 @@ function frame(now) {
     accumulator -= STEP;
   }
 
+  // The bars move every frame; everything else is happy at CFG.uiRate.
+  UI.refreshBars();
+
   uiAccumulator += dt;
   if (uiAccumulator >= 1 / CFG.uiRate) {
-    uiAccumulator = 0;
+    // subtract rather than zero: zeroing throws away the overshoot, so a
+    // long frame pushes the next refresh late and the readouts jitter
+    uiAccumulator -= 1 / CFG.uiRate;
     UI.refresh();
   }
 

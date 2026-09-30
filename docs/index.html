@@ -32,7 +32,6 @@
       <div class="coin coin-rat">
         <span class="coin-ico">🦝</span>
         <span id="w-ratoni" class="coin-val">0</span>
-        <span id="w-ratrate" class="coin-sub">+0/s</span>
       </div>
       <div class="coin coin-star">
         <span class="coin-ico">⭐</span>
@@ -47,15 +46,7 @@
     <button id="btn-menu" class="icon-btn" aria-label="Menu">☰</button>
   </header>
 
-  <!-- Plastic is the score and the price of everything, so it gets a
-       strip of its own instead of a chip in the header. -->
-  <section id="score-strip">
-    <span class="score-ico">♻️</span>
-    <span id="w-plastic" class="score-val">0</span>
-    <span id="w-plasticrate" class="score-rate">+0/s</span>
-  </section>
-
-  <!-- The rank bar: one box per chest opened this level. Fill it and
+  <!-- The rank bar: one box per pack opened this level. Fill it and
        RANK UP is available whenever you want it. -->
   <section id="rank">
     <span id="rank-level" class="rank-level">LEVEL 1</span>
@@ -63,9 +54,26 @@
     <button id="btn-rank" class="rank-btn hidden">RANK<br>UP</button>
   </section>
 
-  <!-- Three tasks at a time. A finished one turns into a chest you open
+  <!-- Three tasks at a time. A finished one turns into a pack you tear
        right there, and the slot deals the next task. -->
   <section id="tasks"></section>
+
+  <!-- What you own, and how much of it you spend at a time. Lives outside
+       #pages on purpose: the pages scroll, this does not, so the plastic
+       count and the bulk step stay under your thumb at the bottom of a
+       long row list. One box per harvested thing - zone 2 adds its own
+       beside this one, and then they become the zone switcher. -->
+  <section id="res-bar">
+    <div id="res-boxes" class="res-boxes">
+      <button class="res on" data-zone="collect">
+        <span class="res-ico">♻️</span>
+        <span id="w-plastic" class="res-val">0</span>
+      </button>
+    </div>
+    <div class="res-tools">
+      <button id="btn-bulk" class="bulk-btn">x1</button>
+    </div>
+  </section>
 
   <main id="pages">
 
@@ -73,12 +81,6 @@
     <section id="page-collect" class="page">
       <div class="zone-bar">
         <span id="zone-name">Zone 1</span>
-        <div class="bulk" id="bulk-picker">
-          <button class="bulk-btn" data-bulk="1">x1</button>
-          <button class="bulk-btn" data-bulk="10">x10</button>
-          <button class="bulk-btn" data-bulk="100">x100</button>
-          <button class="bulk-btn" data-bulk="max">MAX</button>
-        </div>
       </div>
       <div id="rows"></div>
       <div class="foot-note">Tap a pile to send the raccoons out once. Hire its manager and they keep going on their own.</div>
@@ -88,7 +90,7 @@
     <section id="page-managers" class="page hidden">
       <div class="zone-bar"><span>Raccoon Managers</span><span id="mgr-owned" class="muted">0 / 4</span></div>
       <div id="mgr-grid" class="card-grid"></div>
-      <div class="foot-note">Cards come out of chests. Stars come from putting raccoons to work. A level costs both, and halves the collection time.</div>
+      <div class="foot-note">Cards come out of packs. Stars come from putting raccoons to work. A level costs both, and halves the collection time.</div>
     </section>
 
     <!-- ============ PAGE 3 : DEN ============ -->

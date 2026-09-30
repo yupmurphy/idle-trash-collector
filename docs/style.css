@@ -21,6 +21,7 @@
   --amber-dk:  #a86e10;
   --pink:      #ff6b9d;
   --blue:      #4aa8ff;
+  --purple:    #b07cff;
 
   --text:      #eaf1ff;
   --muted:     #8fa0c0;
@@ -61,11 +62,13 @@ body {
   display: flex;
   flex-direction: column;
   padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
-  /* brick courses behind the alley, barely there but it stops the
-     background reading as a flat app canvas */
+  /* Plain gradient, no pattern. This used to carry two repeating
+     gradients as "brick courses" - 1px white lines every 26px and 52px.
+     At 1.7% opacity they were meant to be subliminal, but a 1px line is
+     never subliminal: the phone snaps it to a whole pixel and it lands
+     at full strength, so the background read as a grid of pale
+     rectangles rather than as an alley wall. */
   background:
-    repeating-linear-gradient(0deg, rgba(255,255,255,.017) 0 1px, transparent 1px 26px),
-    repeating-linear-gradient(90deg, rgba(255,255,255,.017) 0 1px, transparent 1px 52px),
     radial-gradient(120% 70% at 50% 0%, #1b2440 0%, var(--bg-2) 55%, #0f1523 100%);
   box-shadow: 0 0 0 1px #000, 0 0 40px #000;
 }
@@ -85,8 +88,8 @@ body {
 
 .avatar {
   position: relative;
-  width: 44px; height: 44px;
-  flex: 0 0 44px;
+  width: 40px; height: 40px;
+  flex: 0 0 40px;
   font-size: 24px;
   border-radius: var(--r-s);
   background: linear-gradient(#3d4f7d, #212b45);
@@ -108,48 +111,75 @@ body {
 .wallet { flex: 1; display: flex; gap: 6px; min-width: 0; }
 
 .coin {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 3px solid var(--line);
+  background: linear-gradient(#36436a, #222c46);
+  font-size: 14.5px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.coin-ico { font-size: 15.5px; flex: 0 0 auto; }
+.coin-val { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* The raccoon chip holds a count AND a rate, so it gets the lion's share.
+   Stars and cards are one short number each and shrink to suit. */
+.coin-rat     { background: linear-gradient(#3c5a4e, #1e3329); flex: 1 1 auto; }
+.coin-star    { background: linear-gradient(#6a5a2a, #3d3216); }
+.coin-card    { background: linear-gradient(#4a3a6a, #271e3d); }
+
+/* --------------------------- RESOURCE BAR --------------------------- */
+/* One box per harvested thing, and under them the bulk step. This sits
+   below #tasks and above #pages, so it never scrolls away - the plastic
+   count and the buy step are the two things you look at while you are
+   halfway down the row list. */
+#res-bar {
+  padding: 8px 10px;
+  background: linear-gradient(#17324a, #102232);
+  border-bottom: 3px solid var(--line);
+}
+.res-boxes { display: flex; gap: 8px; }
+.res {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 5px 7px;
-  border-radius: 999px;
+  gap: 7px;
+  padding: 6px 11px;
+  border-radius: var(--r-s);
   border: 3px solid var(--line);
-  background: linear-gradient(#36436a, #222c46);
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
+  background: linear-gradient(#24405a, #16293c);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--line);
 }
-.coin-ico { font-size: 13px; flex: 0 0 auto; }
-.coin-val { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.coin-sub { color: var(--teal); font-size: 10px; margin-left: auto; flex: 0 0 auto; }
-.coin-rat     { background: linear-gradient(#3c5a4e, #1e3329); flex: 1.7; }
-.coin-star    { background: linear-gradient(#6a5a2a, #3d3216); flex: 1.15; }
-.coin-card    { background: linear-gradient(#4a3a6a, #271e3d); flex: .95; }
-
-/* --------------------------- SCORE STRIP ---------------------------- */
-#score-strip {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 7px 12px;
-  background: linear-gradient(#17324a, #102232);
-  border-bottom: 3px solid var(--line);
-}
-.score-ico  { font-size: 20px; }
-.score-val  {
+/* the box of the zone you are standing in */
+.res.on { background: linear-gradient(#2c5570, #173347); }
+.res:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+.res-ico { font-size: 20px; flex: 0 0 auto; }
+.res-val {
   flex: 1; min-width: 0;
-  font-size: 22px;
+  text-align: left;
+  font-size: 21px;
   color: var(--moon);
   text-shadow: 0 2px 0 var(--line);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.score-rate { font-size: 12px; color: var(--teal); flex: 0 0 auto; }
+
+/* The bulk step hangs off the right, under the boxes. It is hidden rather
+   than removed off the collect page: dropping it would change the height of
+   a bar that sits above the pages, so every page below would jump. */
+.res-tools { display: flex; justify-content: flex-end; margin-top: 7px; visibility: hidden; }
+#res-bar.buying .res-tools { visibility: visible; }
 
 .icon-btn {
-  flex: 0 0 36px;
-  width: 36px; height: 36px;
+  flex: 0 0 34px;
+  width: 34px; height: 34px;
   border-radius: var(--r-s);
   border: 3px solid var(--line);
   background: linear-gradient(#36436a, #222c46);
@@ -159,7 +189,7 @@ body {
 }
 
 /* ------------------------------ RANK -------------------------------- */
-/* One box per chest opened this level. Fill them all and the way out of
+/* One box per pack opened this level. Fill them all and the way out of
    the level lights up. */
 #rank {
   display: flex;
@@ -207,15 +237,25 @@ body {
   letter-spacing: .5px;
   cursor: pointer;
   box-shadow: 0 3px 0 var(--line);
-  animation: chest-shake 1.6s infinite;
+  animation: shake 1.6s infinite;
+}
+
+/* the one "come and get it" wobble in the game */
+@keyframes shake {
+  0%, 70%, 100% { transform: rotate(0) }
+  75% { transform: rotate(-6deg) scale(1.05) }
+  80% { transform: rotate(6deg)  scale(1.05) }
+  85% { transform: rotate(-4deg) scale(1.03) }
+  90% { transform: rotate(4deg)  scale(1.03) }
 }
 
 /* ------------------------------ TASKS ------------------------------- */
-/* One band, three chests side by side. Each column is a task with its
-   own chest sitting on top of it. */
+/* One band, three columns. Each column carries two layouts and shows
+   exactly one: the job while it runs, and the pack once it is finished.
+   A finished task hands its whole cell to the pack. */
 #tasks {
   display: flex;
-  gap: 6px;
+  gap: 10px;
   padding: 8px 10px 10px;
   background: linear-gradient(#1f2a42, #182034);
   border-bottom: 3px solid var(--line);
@@ -224,50 +264,127 @@ body {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 5px 7px;
+  /* A HEIGHT OF ITS OWN, not one borrowed from a sibling. The cells used
+     to be sized by whichever of the three was still running, so when all
+     three finished at once every .task-todo was display:none, nothing
+     was left to set the height, and the packs collapsed to nothing -
+     three cells reading CLICK TO CLAIM with no pack above them. */
+  height: 76px;
   border-radius: var(--r-s);
   border: 3px solid var(--line);
   background: linear-gradient(#26314d, #1a2236);
 }
-.task.done { background: linear-gradient(#2d4a3a, #1b3026); }
 
+/* ---- the job, while it is running ---- */
+.task-todo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 7px;
+}
+.task.done .task-todo { display: none; }
+
+/* icon and wording on one line: the icon already says which pile, so
+   the text only has to carry the number. The pair is centred as a
+   group, so a short label does not sit off in the corner. */
+.task-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+}
 .task-text {
-  width: 100%;
-  font-size: 9px;
-  line-height: 1.25;
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 9.5px;
+  line-height: 1.2;
   text-align: center;
   color: var(--text);
-  height: 2.5em;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.task-count { font-size: 9px; color: var(--muted); font-weight: 600; }
-.task-bar   { width: 100%; height: 8px; }
-.task.done .task-text { color: var(--lime); }
 
-.task-chest {
-  width: 100%;
-  height: 38px;
-  padding: 3px 6px;
-  border-radius: var(--r-s);
-  border: 3px solid var(--line);
-  background: linear-gradient(#2c3552, #1d2438);
-  font: inherit; font-size: 17px;
-  line-height: 1;
+/* The count sits ON the bar rather than under it - the same trick the
+   collection rows use for their timer. One line instead of two, so the
+   bar can be thick enough to read the number off. */
+/* .task .task-bar, not .task-bar: the generic .bar rule is further down
+   the file and carries the same specificity, so it would win on height. */
+.task .task-bar { width: 100%; height: 18px; position: relative; }
+.task-count {
+  position: absolute; inset: 0;
   display: grid; place-items: center;
-  cursor: not-allowed;
+  font-size: 10.5px;
+  color: #fff;
+  /* an outline, not a drop shadow: this text crosses from the dark
+     track onto bright lime as the bar fills, and has to hold up on both */
+  text-shadow: 0 0 3px #000, 0 0 2px #000, 0 1px 1px #000;
+  pointer-events: none;
 }
-.task-chest svg { display: block; height: 30px; width: auto; }
-.task-lock { opacity: .4; }
-.task-chest:not([disabled]) {
-  background: linear-gradient(#5a4a22, #33280f);
-  border-color: var(--amber);
+
+/* where the work happens. Dimmed: it is a signpost, not a prize. */
+.task-goal {
+  flex: 0 0 auto;
+  width: 20px; height: 20px;
+  display: grid; place-items: center;
+  font-size: 15px; line-height: 1;
+  color: var(--text);
+}
+.task-goal svg { display: block; width: 100%; height: 100%; opacity: .6; }
+.task-tick { opacity: .4; }
+
+/* ---- the prize, once it is finished ---- */
+.task-claim {
+  flex: 1;
+  min-width: 0;
+  display: none;            /* flex, once .task is .done */
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+  padding: 5px 4px 6px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font: inherit;
+  color: var(--lime);
   cursor: pointer;
-  box-shadow: 0 0 14px rgba(255, 194, 71, .45);
-  animation: chest-shake 1.6s infinite;
+  animation: pack-wiggle 1.9s infinite;
 }
+.task.done { background: linear-gradient(#2d4a3a, #1b3026); border-color: var(--lime-dk); }
+.task.done .task-claim { display: flex; }
+.task-claim:active { transform: scale(.94); animation: none; }
+
+.task-pack { flex: 1; min-height: 0; display: grid; place-items: center; }
+.task-pack svg {
+  display: block;
+  height: 100%;
+  width: auto;
+  /* neutral, not amber: the pack's own colour is what states its rarity,
+     so the lift under it must not tint a white common pack gold */
+  filter: drop-shadow(0 0 9px rgba(255, 255, 255, .32));
+}
+.task-claim-label {
+  font-size: 8.5px;
+  letter-spacing: .6px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+/* A slow lean, not the chest's rattle. The pack is paper - it should
+   look like it is being offered, not like it is about to explode. */
+@keyframes pack-wiggle {
+  0%, 72%, 100% { transform: rotate(0) }
+  80%           { transform: rotate(-3deg) }
+  90%           { transform: rotate(3deg) }
+}
+
+/* ---- a level with no tasks left ---- */
+.task.spent { opacity: .45; }
 
 .bar {
   height: 12px;
@@ -277,22 +394,22 @@ body {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, .55);
   overflow: hidden;
 }
+/* One green, lit from above by the gradient alone.
+   Two things have been taken off this:
+     - the diagonal stripes, which stood still while the bar grew, so
+       every step the fill took read as the stripes jerking
+     - a 2px white inset highlight across the top. A hard bright edge on
+       a rounded shape that is re-measured every frame never rasterises
+       the same way twice, so it crawled and sparkled along the top of
+       the bar. The gradient gives the same lit look with no edge for
+       the light to catch on. */
 .bar-fill {
   position: relative;
   height: 100%;
   width: 0%;
   border-radius: 999px;
-  background: repeating-linear-gradient(115deg, var(--lime) 0 10px, var(--lime-dk) 10px 20px);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .28);
+  background: linear-gradient(#b6f072, var(--lime) 45%, var(--lime-dk));
   transition: width .18s linear;
-}
-
-@keyframes chest-shake {
-  0%, 70%, 100% { transform: rotate(0) }
-  75% { transform: rotate(-6deg) scale(1.05) }
-  80% { transform: rotate(6deg)  scale(1.05) }
-  85% { transform: rotate(-4deg) scale(1.03) }
-  90% { transform: rotate(4deg)  scale(1.03) }
 }
 
 /* ------------------------------ PAGES ------------------------------- */
@@ -317,20 +434,22 @@ body {
   line-height: 1.5;
 }
 
-.bulk { display: flex; gap: 4px; flex: 0 0 auto; }
+/* One button that cycles x1 -> 10% -> 50% -> MAX, rather than four that
+   are always three-quarters wrong. It is styled as the live setting, not
+   as a menu, so it always reads as "this is what a buy costs right now". */
 .bulk-btn {
-  padding: 5px 9px;
+  min-width: 62px;
+  padding: 5px 13px;
   border-radius: 999px;
   border: 3px solid var(--line);
-  background: #29334e;
-  color: var(--muted);
-  font: inherit; font-size: 11px;
-  cursor: pointer;
-}
-.bulk-btn.on {
   background: linear-gradient(var(--teal), var(--teal-dk));
   color: #04241c;
+  font: inherit; font-size: 13px;
+  letter-spacing: .5px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--line);
 }
+.bulk-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
 
 /* ------------------------------- ROWS ------------------------------- */
 .row {
@@ -350,13 +469,16 @@ body {
 
 /* the tappable pile of trash on the left, with the count of raccoons
    working it and the lifetime haul underneath */
-.row-left { flex: 0 0 76px; width: 76px; display: flex; flex-direction: column; gap: 5px; }
+/* 62px, not 76px: every pixel here comes off the Buy button, and at
+   "BUY x100 RACCOONS · 🦝 100 · ♻️ 1 M" that button is the tightest
+   thing on a 375px screen. The disc is still large enough to tap. */
+.row-left { flex: 0 0 62px; width: 62px; display: flex; flex-direction: column; gap: 5px; }
 
 /* A round, light-blue disc with the drawn item on it. It goes a deeper
    blue the moment there are stars waiting to be picked up. */
 .row-tap {
   position: relative;
-  height: 76px;
+  height: 62px;
   border-radius: 50%;
   border: 3px solid var(--line);
   background:
@@ -373,7 +495,7 @@ body {
     radial-gradient(circle at 50% 22%, #6fb3e8 0%, #2f6fae 55%, #17457a 100%);
   box-shadow: inset 0 -5px 10px rgba(6, 28, 55, .5), 0 0 16px rgba(74, 168, 255, .5);
 }
-.row-emoji { display: block; width: 62px; height: 62px; }
+.row-emoji { display: block; width: 50px; height: 50px; }
 .row-emoji svg { display: block; width: 100%; height: 100%; }
 
 /* stars land on the pile and wait there to be picked up */
@@ -415,7 +537,7 @@ body {
 .row-stock {
   position: relative;
   text-align: center;
-  font-size: 12px;
+  font-size: 11px;
   padding: 3px 2px;
   border-radius: 999px;
   background: #0d1220;
@@ -425,7 +547,7 @@ body {
 .row-stock-fill {
   position: absolute; left: 0; top: 0; bottom: 0;
   width: 0%;
-  background: repeating-linear-gradient(115deg, #6b5a22 0 8px, #4a3d16 8px 16px);
+  background: linear-gradient(#6b5a22, #4a3d16);
   transition: width .2s linear;
 }
 .row-stock-num {
@@ -443,12 +565,13 @@ body {
 .row-out { font-size: 11px; color: var(--teal); white-space: nowrap; }
 .row-out.idle { color: var(--muted); }
 
-/* the collection bar: one sweep is one cycle */
+/* The collection bar: one sweep is one cycle. It is driven by
+   UI.refreshBars() on every animation frame, so it must not carry a
+   width transition - the browser would still be easing towards the last
+   value when the next one lands, and the sweep would drag behind the
+   timer. */
 .row-bar { position: relative; height: 16px; }
-.row-bar .bar-fill {
-  background: repeating-linear-gradient(115deg, var(--teal) 0 10px, var(--teal-dk) 10px 20px);
-  transition: none;
-}
+.row-bar .bar-fill { transition: none; }
 .row-timer {
   position: absolute; inset: 0;
   display: grid; place-items: center;
@@ -461,7 +584,7 @@ body {
 /* Too fast to watch: the bar stops sweeping and just glows, so the row
    reads as a solid stream instead of a strobe light. */
 .row.instant .row-bar .bar-fill {
-  background: linear-gradient(90deg, var(--teal), var(--lime), var(--teal));
+  background: linear-gradient(90deg, var(--lime-dk), var(--lime), var(--lime-dk));
   background-size: 200% 100%;
   animation: stream 1.1s linear infinite;
 }
@@ -490,8 +613,8 @@ body {
 
 .buy-btn {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 8px;
-  padding: 10px 10px;
+  gap: 6px;
+  padding: 10px 8px;
   border-radius: var(--r-s);
   border: 3px solid var(--line);
   /* a sheen across the top half, the way a moulded plastic button
@@ -511,10 +634,19 @@ body {
   color: var(--muted);
   cursor: not-allowed;
 }
+/* The label is the part that gives way. Without min-width:0 a flex item
+   refuses to shrink below its own text, so "BUY x100 K RACCOONS" pushed
+   the price clean off the end of the button instead of clipping. */
+.buy-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .buy-cost {
   flex: 0 0 auto;
   font-size: 11px;
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: 999px;
   background: rgba(10, 14, 24, .28);
   white-space: nowrap;
@@ -533,7 +665,7 @@ body {
 .lock-title { font-size: 13px; color: var(--muted); }
 .lock-req   { font-size: 11px; color: var(--amber); font-weight: 600; }
 .lock-body .bar-fill {
-  background: repeating-linear-gradient(115deg, var(--amber) 0 10px, var(--amber-dk) 10px 20px);
+  background: linear-gradient(#ffdc92, var(--amber) 45%, var(--amber-dk));
 }
 
 /* ----------------------------- MANAGERS ----------------------------- */
@@ -758,8 +890,10 @@ body {
 .loot-qty  { font-size: 11px; color: var(--amber); }
 .loot.new  { background: linear-gradient(#3f7d5f, #1c3d2f); }
 .loot.rare { border-color: var(--blue); box-shadow: 0 0 14px rgba(74, 168, 255, .55); }
+.loot.epic { border-color: var(--purple); box-shadow: 0 0 16px rgba(176, 124, 255, .6); }
 .loot-rarity { font-size: 8px; color: var(--muted); letter-spacing: .5px; }
 .loot.rare .loot-rarity { color: var(--blue); }
+.loot.epic .loot-rarity { color: var(--purple); }
 
 .modal-rarity {
   font-size: 10px; letter-spacing: 1px;
@@ -767,9 +901,8 @@ body {
   margin-bottom: 2px;
 }
 .modal-rarity.rare { color: var(--blue); }
+.modal-rarity.epic { color: var(--purple); }
 
-/* a task whose level has no more work in it */
-.task.spent { opacity: .45; }
 .loot-new-tag { font-size: 8px; color: var(--lime); }
 .loot-stars {
   font-size: 15px; color: var(--amber);
@@ -779,31 +912,54 @@ body {
 .modal-portrait { width: 176px; margin: 10px auto; }
 .modal-portrait svg { display: block; width: 100%; height: auto; }
 
-/* ---- the chest, and the beat before the loot ---- */
-.chest-stage {
-  width: 118px; margin: 16px auto 6px;
+/* ---- the pack, and the beat before the loot ---- */
+.pack-stage {
+  width: 104px; margin: 14px auto 6px;
 }
-.chest-stage svg { display: block; width: 100%; height: auto; overflow: visible; }
-/* The hinge is the back edge of the box, across the middle of the lid's
-   base, in viewBox units. The lid tilts backwards and away in
-   perspective - a chest with a lock on the front never opens sideways. */
-.chest-stage .chest-lid {
-  transform-origin: 40px 34px;
-  transition: transform .5s cubic-bezier(.34, 1.4, .64, 1);
+.pack-stage svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+/* The glow has to be off everywhere, not just here, because the task
+   strip renders the same SVG with no .pack-stage around it. */
+.pack-glow { opacity: 0; }
+
+/* Sealed -> torn, in one beat: the foil lifts off the tear line, turns
+   as it goes, and fades; the body is already ragged underneath because
+   both halves are cut from the same zigzag.
+
+   This replaced a treasure chest that took four attempts and never
+   worked. A box has to show its INSIDE to look open, which needs
+   perspective, and the browser flattens real 3D on SVG groups. A pack
+   has no inside - it only tears, and a tear is a translate and a rotate
+   in the plane of the screen. Nothing here can go wrong the way the lid
+   did. */
+.pack-stage .pack-top { transform-origin: 28px 26px; }
+.pack-stage.open .pack-top {
+  transform: translate(-7px, -30px) rotate(-17deg);
+  opacity: 0;
+  transition: transform .42s cubic-bezier(.3, 1.2, .5, 1),
+              opacity .3s linear .12s;
 }
-/* blurred, or the flat circle reads as a second lid behind the chest */
-.chest-stage .chest-glow { opacity: 0; filter: blur(9px); transition: opacity .4s; }
-/* Squashed down onto the box rim it is hinged to, and lifted a touch,
-   so it reads as a slab leaning back behind the open box. It is drawn
-   behind the front wall, so the dark inside shows in front of it. */
-.chest-stage.open .chest-lid { transform: translateY(-10px) scaleY(.34); }
-.chest-stage.open .chest-glow { opacity: 1; animation: chest-pulse 1.4s ease-out infinite; }
-@keyframes chest-pulse {
+
+/* the body takes the tug - without it the foil moves and the pack just
+   sits there, which reads as an image swap rather than something opening */
+.pack-stage .pack-body { transform-origin: 28px 77px; }
+.pack-stage.open .pack-body { animation: pack-jolt .42s cubic-bezier(.3, 1.4, .6, 1); }
+@keyframes pack-jolt {
+  0%   { transform: translateY(0)   scaleY(1); }
+  28%  { transform: translateY(2px) scaleY(.94); }
+  62%  { transform: translateY(0)   scaleY(1.03); }
+  100% { transform: translateY(0)   scaleY(1); }
+}
+
+/* blurred, or the flat circle reads as a disc behind the pack */
+.pack-stage .pack-glow { filter: blur(9px); transition: opacity .4s; }
+.pack-stage.open .pack-glow { opacity: 1; animation: pack-pulse 1.4s ease-out infinite; }
+@keyframes pack-pulse {
   0%, 100% { opacity: .5; transform: scale(1); }
   50%      { opacity: 1;  transform: scale(1.12); }
 }
 
-/* everything under the chest waits for the lid */
+/* everything under the pack waits for the foil */
 .pending { opacity: 0; pointer-events: none; }
 .modal-cards, .loot-stars, .modal .btn { transition: opacity .3s; }
 .stat-line {

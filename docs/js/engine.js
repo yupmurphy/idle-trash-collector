@@ -110,10 +110,21 @@ const Engine = (function () {
   // ------------------------------------------------------------------
   //  THE CLOCK
   // ------------------------------------------------------------------
+  // Raccoons walk in once a second, as a batch. Paying out a fraction of
+  // an animal every frame made the wallet creep up by 0.07 at a time,
+  // which reads as a number ticking over, not as raccoons arriving. The
+  // clock is deliberately not saved - a second lost on reload is cheaper
+  // than another field in the save file.
+  let ratoniClock = 0;
+
   function tick(dt) {
-    const gained = ratoniRate() * dt;
-    S.ratoni += gained;
-    S.ratoniTotal += gained;
+    ratoniClock += dt;
+    while (ratoniClock >= 1) {
+      ratoniClock -= 1;
+      const gained = ratoniRate();
+      S.ratoni += gained;
+      S.ratoniTotal += gained;
+    }
 
     TIERS.forEach(function (t) {
       if (!isRunning(t)) return;
@@ -161,10 +172,21 @@ const Engine = (function () {
     return Math.max(0, Math.min(Math.floor(S.ratoni), Math.floor(S.plastic / t.cost)));
   }
 
+  // S.bulk is either a flat count, a fraction of what you can afford, or
+  // 'max'. The fractions are what make the button useful deep in a run:
+  // "50%" means something whether the pile takes eight raccoons or eight
+  // million, where a fixed x100 stops being a step at all.
+  function bulkCount(max) {
+    const b = S.bulk;
+    if (b === 'max') return max;
+    if (b > 0 && b < 1) return Math.floor(max * b);
+    return b;                                     // a flat count: x1
+  }
+
   function buyQuote(id) {
     const t = tier(id);
     const max = maxAffordable(t);
-    let count = S.bulk === 'max' ? max : S.bulk;
+    let count = bulkCount(max);
     if (count < 1) count = 1;                     // show the price of one
     return {
       count: count,
@@ -274,18 +296,36 @@ const Engine = (function () {
   }
 
   // ------------------------------------------------------------------
-  //  MISSIONS - three live at a time, each with its own chest
+  //  MISSIONS - three live at a time, each with its own pack
   // ------------------------------------------------------------------
-  // A level deals from the same ladder every time, with the resource
-  // targets doubled per level. Targets counted in raccoons on a row are
-  // left alone: those are tied to unlock thresholds, which do not move.
+  // A level deals from the same ladder every time, with the targets
+  // scaled up per level. The two kinds scale at very different rates on
+  // purpose:
+  //
+  //   resources (plastic, collected, stars) grow FAST, because the
+  //     player's output grows faster still - managers keep their levels
+  //     across a rank, so every level starts with a better engine than
+  //     the last one finished with. A gentle multiplier here does not
+  //     make the level harder, it makes it shorter.
+  //
+  //   raccoons on a row grow SLOWLY, because they are rate-limited: a
+  //     raccoon arrives per second plus deals, and deals reset with the
+  //     zone. This is the one target the player cannot rush with a big
+  //     plastic balance, so it is what actually holds a level's length.
+  //
+  // "Hire N managers" and "open the bottle pile" never scale - one is
+  // capped at six, the other is a yes or no.
   function missionAt(i) {
     if (i >= tasksInLevel(S.level)) return null;   // level's tasks are spent
     const base = i < MISSIONS.length ? MISSIONS[i] : endlessMission(i - MISSIONS.length);
-    if (S.level === 1 || base.type === 'assign' || base.type === 'manager') return base;
+    if (S.level === 1 || base.type === 'manager' || base.type === 'unlock') return base;
+
+    const step = base.type === 'assign'
+      ? LEVELS.assignScalePerLevel
+      : LEVELS.taskScalePerLevel;
 
     const scaled = Object.assign({}, base);
-    scaled.amount = base.amount * Math.pow(LEVELS.taskScalePerLevel, S.level - 1);
+    scaled.amount = Math.round(base.amount * Math.pow(step, S.level - 1));
     return scaled;
   }
 
@@ -303,6 +343,8 @@ const Engine = (function () {
       case 'collect': return S.collected[m.tier] || 0;
       case 'stars':   return S.starsTotal;
       case 'manager': return MANAGERS.filter(function (x) { return S.mgrLevel[x.id] > 0; }).length;
+      // Opening a row is a one-off: done or not done, never a count.
+      case 'unlock':  return S.unlocked[m.tier] ? 1 : 0;
     }
     return 0;
   }
@@ -322,7 +364,7 @@ const Engine = (function () {
   function levelDone()  { return S.missionNext >= tasksInLevel(S.level) &&
                                  S.slots.every(function (i) { return missionAt(i) === null; }); }
 
-  // Which managers a chest can roll: the ones running an open row, plus
+  // Which managers a pack can roll: the ones running an open row, plus
   // any passive card this level has reached. Rarity is a weight, so a
   // rare card is simply a smaller slice of the same wheel.
   function cardPool() {
@@ -346,14 +388,14 @@ const Engine = (function () {
     return lo + Math.floor(Math.random() * (hi - lo + 1));
   }
 
-  // Claim the chest sitting on one mission slot, then deal the next
+  // Claim the pack sitting on one mission slot, then deal the next
   // mission into that slot. The loot is rolled here, not written into
-  // the mission, so every chest of a kind is a fresh roll.
-  // Roll one chest of a kind. Loot grows with the level: Z + level x 2%.
-  function rollChest(chest, guarantee) {
+  // the mission, so every pack of a kind is a fresh roll.
+  // Roll one pack of a kind. Loot grows with the level: Z + level x 2%.
+  function rollPack(pack, guarantee) {
     const bonus = 1 + S.level * LEVELS.lootPerLevel;
-    const stars = Math.round(randInt(chest.stars[0], chest.stars[1]) * bonus);
-    const count = Math.round(randInt(chest.cards[0], chest.cards[1]) * bonus);
+    const stars = Math.round(randInt(pack.stars[0], pack.stars[1]) * bonus);
+    const count = Math.round(randInt(pack.cards[0], pack.cards[1]) * bonus);
 
     const drawn = {}, wasNew = {};
     function draw(mid) {
@@ -380,7 +422,7 @@ const Engine = (function () {
     S.starsTotal += stars;
 
     return {
-      chest: chest,
+      pack: pack,
       stars: stars,
       cards: Object.keys(drawn).map(function (mid) {
         return { id: mid, qty: drawn[mid], isNew: !!wasNew[mid] };
@@ -388,14 +430,14 @@ const Engine = (function () {
     };
   }
 
-  // Claim the chest sitting on one task, fill a box on the rank bar, and
+  // Claim the pack sitting on one task, fill a box on the rank bar, and
   // deal the next task into that slot.
   function claim(slot) {
     const idx = S.slots[slot];
     if (idx === undefined || !missionDone(idx)) return null;
     const m = missionAt(idx);
 
-    const loot = rollChest(CHESTS[m.chest || DEFAULT_CHEST], m.grant);
+    const loot = rollPack(PACKS[m.pack || DEFAULT_PACK], m.grant);
 
     S.rankProgress = Math.min(rankSlots(S.level), S.rankProgress + 1);
     S.slots[slot] = S.missionNext++;
@@ -403,11 +445,11 @@ const Engine = (function () {
     return loot;
   }
 
-  // Cash in a full rank bar: a better chest, then the zone starts over.
+  // Cash in a full rank bar: a better pack, then the zone starts over.
   // Managers, their cards and every star you earned come with you.
   function rankUp() {
     if (!rankFull()) return null;
-    const loot = rollChest(CHESTS.rank, null);
+    const loot = rollPack(PACKS.rank, null);
     S.level++;
     resetZone();
     return loot;
@@ -445,7 +487,7 @@ const Engine = (function () {
   //  DEV HANDOUTS
   //  Wired to the buttons in the menu, behind CFG.dev. Cards go to every
   //  manager of that rarity, and a manager who was not hired yet gets
-  //  hired by the first one, same as a chest would do.
+  //  hired by the first one, same as a pack would do.
   // ------------------------------------------------------------------
   function devGive(what, amount) {
     if (what === 'ratoni') { S.ratoni += amount; S.ratoniTotal += amount; return; }
@@ -472,7 +514,8 @@ const Engine = (function () {
 
     const before = { plastic: S.plasticTotal, ratoni: S.ratoniTotal };
 
-    const earned = ratoniRate() * capped;
+    // whole raccoons here too, the same as the once-a-second batch
+    const earned = Math.floor(ratoniRate() * capped);
     S.ratoni += earned;
     S.ratoniTotal += earned;
 

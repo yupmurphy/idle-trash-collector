@@ -10,6 +10,17 @@ const PASSIVE_LABEL = {
   revenue: 'Plastic from bags',
 };
 
+// The buy step, in the order the one button cycles through. A fraction is
+// a fraction of what you can afford right now; 'max' is all of it. Percents
+// beat fixed counts here because a pile that takes eight raccoons and a
+// pile that takes eight million share the same button.
+const BULK = [
+  { v: 1,     label: 'x1'  },
+  { v: 0.1,   label: '10%' },
+  { v: 0.5,   label: '50%' },
+  { v: 'max', label: 'MAX' },
+];
+
 // Cheat buttons for testing. Shown only while CFG.dev is true; delete
 // this block and the CFG.dev flag to be rid of them.
 const DEV_PANEL =
@@ -37,7 +48,7 @@ const UI = (function () {
   //  BUILD
   // ------------------------------------------------------------------
   function build() {
-    ['w-ratoni', 'w-ratrate', 'w-stars', 'w-cards', 'w-plastic', 'w-plasticrate',
+    ['w-ratoni', 'w-stars', 'w-cards', 'w-plastic', 'btn-bulk',
      'rank', 'rank-level', 'rank-boxes', 'btn-rank',
      'tasks', 'rows', 'mgr-grid', 'mgr-owned', 'trades',
      'rat-rate-big', 'den-art', 'zone-name', 'avatar-badge',
@@ -82,24 +93,44 @@ const UI = (function () {
     const host = el['tasks'];
     host.innerHTML = '';
 
-    // All three chests share one row - three columns, chest on top of
-    // its own task, so the strip stays one band across the screen.
+    // Three columns across one band. Each one holds two layouts and
+    // shows exactly one: the job while it is running, and the pack once
+    // it is done. A finished task gives its WHOLE cell to the pack -
+    // sharing the cell with a progress bar left the art about 30px tall,
+    // and a pack is a portrait shape that cannot survive that.
     for (let i = 0; i < MISSION_SLOTS; i++) {
       const node = document.createElement('div');
       node.className = 'task';
       node.innerHTML =
-        '<button class="task-chest" data-slot="' + i + '" disabled></button>' +
-        '<div class="task-text"></div>' +
-        '<div class="bar task-bar"><div class="bar-fill"></div></div>' +
-        '<div class="task-count"></div>';
+        '<div class="task-todo">' +
+          '<div class="task-head">' +
+            '<div class="task-goal"></div>' +
+            '<div class="task-text"></div>' +
+          '</div>' +
+          // the count rides ON the bar, the way the row timer does
+          '<div class="bar task-bar">' +
+            '<div class="bar-fill"></div>' +
+            '<span class="task-count"></span>' +
+          '</div>' +
+        '</div>' +
+        '<button class="task-claim" data-slot="' + i + '">' +
+          '<div class="task-pack"></div>' +
+          '<div class="task-claim-label">CLICK TO CLAIM</div>' +
+        '</button>';
       host.appendChild(node);
 
       taskNodes.push({
         root:  node,
+        goal:  node.querySelector('.task-goal'),
         text:  node.querySelector('.task-text'),
         count: node.querySelector('.task-count'),
         fill:  node.querySelector('.bar-fill'),
-        chest: node.querySelector('.task-chest'),
+        pack:  node.querySelector('.task-pack'),
+        // what each of those two slots currently holds, so refresh() can
+        // leave the SVG alone instead of re-parsing it fifteen times a
+        // second
+        goalKey: null,
+        packKey: null,
       });
     }
   }
@@ -235,13 +266,20 @@ const UI = (function () {
       b.addEventListener('click', function () { show(b.dataset.page); });
     });
 
-    document.querySelectorAll('.bulk-btn').forEach(function (b) {
-      b.addEventListener('click', function () {
-        S.bulk = b.dataset.bulk === 'max' ? 'max' : parseInt(b.dataset.bulk, 10);
-        syncBulk();
-        refresh();
-        Sfx.tick();
-      });
+    el['btn-bulk'].addEventListener('click', function () {
+      const i = BULK.findIndex(function (s) { return s.v === S.bulk; });
+      S.bulk = BULK[(i + 1) % BULK.length].v;     // an unknown save lands on x1
+      syncBulk();
+      refresh();
+      Sfx.tick();
+    });
+
+    // The resource boxes are the zone switcher. There is one zone, so the
+    // only box there is goes to the page it already shows - the handler is
+    // here so zone 2 is a row in the HTML and nothing else.
+    $('res-boxes').addEventListener('click', function (ev) {
+      const box = ev.target.closest('[data-zone]');
+      if (box) show(box.dataset.zone);
     });
 
     // taps and buys, delegated so rebuilding a row cannot orphan a handler
@@ -274,8 +312,8 @@ const UI = (function () {
       if (!btn || btn.disabled) return;
       const loot = Engine.claim(parseInt(btn.dataset.slot, 10));
       if (!loot) return;
-      Sfx.chest();
-      chestModal(loot);
+      Sfx.pack();
+      packModal(loot);
       refresh();
     });
 
@@ -313,16 +351,25 @@ const UI = (function () {
   }
 
   function syncBulk() {
-    document.querySelectorAll('.bulk-btn').forEach(function (b) {
-      const v = b.dataset.bulk === 'max' ? 'max' : parseInt(b.dataset.bulk, 10);
-      b.classList.toggle('on', v === S.bulk);
-    });
+    let i = BULK.findIndex(function (s) { return s.v === S.bulk; });
+    // A save from the old four-button picker can hold x10 or x100, which
+    // are not steps any more. Move it onto one rather than just labelling
+    // it x1 while the buy button quietly still charges for ten.
+    if (i < 0) { i = 0; S.bulk = BULK[0].v; }
+    el['btn-bulk'].textContent = BULK[i].label;
   }
 
   function show(name) {
     page = name;
     ['collect', 'managers', 'raccoons'].forEach(function (p) {
       $('page-' + p).classList.toggle('hidden', p !== name);
+    });
+    // The plastic box is the score and stays on every page - deals cost
+    // plastic too. The buy step only means something where there is
+    // something to buy, and the box lights up as the zone you are in.
+    $('res-bar').classList.toggle('buying', name === 'collect');
+    document.querySelectorAll('#res-boxes [data-zone]').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.zone === name);
     });
     document.querySelectorAll('.nav-btn').forEach(function (b) {
       b.classList.toggle('active', b.dataset.page === name);
@@ -333,13 +380,27 @@ const UI = (function () {
   // ------------------------------------------------------------------
   //  REFRESH
   // ------------------------------------------------------------------
+  // The collection bar is the only thing on screen that has to move on
+  // every frame. refresh() runs at CFG.uiRate, which is right for text
+  // and far too coarse for a sweep: at 15 steps a second the bar moves
+  // in visible jumps and never gets drawn full before it wraps, which
+  // reads as a stutter right at the end of the cycle. So the fills get
+  // their own pass, straight off the animation frame - four numbers, no
+  // text, no class flipping.
+  function refreshBars() {
+    if (page !== 'collect') return;
+    TIERS.forEach(function (t) {
+      if (!S.unlocked[t.id] || Engine.isInstant(t)) return;   // instant is drawn full
+      rowNodes[t.id].fill.style.width =
+        (Math.min(1, S.progress[t.id]) * 100).toFixed(2) + '%';
+    });
+  }
+
   function refresh() {
     el['w-ratoni'].textContent  = Fmt.whole(S.ratoni);
-    el['w-ratrate'].textContent = '+' + Fmt.rate(Engine.ratoniRate());
     el['w-stars'].textContent   = Fmt.n(S.stars);
     el['w-cards'].textContent   = Fmt.int(Engine.totalCards());
     el['w-plastic'].textContent = Fmt.n(S.plastic);
-    el['w-plasticrate'].textContent = '+' + Fmt.rate(Engine.totalRate());
 
     refreshRank();
     refreshTasks();
@@ -356,32 +417,72 @@ const UI = (function () {
     if (page === 'raccoons') refreshDen();
   }
 
+  // While a task is running, show where the work happens: the pile you
+  // have to load, the managers page, the wallet the number comes out of.
+  // The line underneath carries the wording; the icon is what you read
+  // at a glance.
+  // The count has to live inside a bar a third of a phone wide, so it
+  // drops to one decimal and loses the space before the suffix:
+  // "420.00 K / 500.00 K" is 19 characters and does not fit, "420K/500K"
+  // is 9 and says the same thing.
+  function taskCount(v) {
+    return Fmt.n(v, 1).replace(' ', '').replace(/\.0(?=[A-Z]|$)/, '');
+  }
+
+  function missionIcon(m) {
+    if (m.tier) return ART.item(m.tier);
+    if (m.type === 'manager') return ART.nav('managers');
+    if (m.type === 'stars') return '⭐';
+    return OUT_ICON.plastic;
+  }
+
   function refreshTasks() {
     S.slots.forEach(function (idx, i) {
       const n = taskNodes[i];
       const m = Engine.missionAt(idx);
       if (!m) {
         // this level has no tasks left - the rank bar is the way on
-        n.root.classList.remove('done');
-        n.root.classList.add('spent');
+        n.root.className = 'task spent';
         n.text.textContent  = 'Level cleared';
         n.count.textContent = '';
-        n.chest.innerHTML = '<span class="task-lock">✓</span>';
-        n.chest.disabled = true;
         n.fill.style.width = '100%';
+        if (n.goalKey !== 'cleared') {
+          n.goalKey = 'cleared';
+          n.goal.innerHTML = '<span class="task-tick">✓</span>';
+        }
         return;
       }
-      n.root.classList.remove('spent');
 
       const done = Engine.missionDone(idx);
-      const prog = Math.min(Engine.missionProgress(m), m.amount);
+      n.root.className = 'task' + (done ? ' done' : '');
 
+      if (done) {
+        // The cell belongs to the pack now, so nothing under it needs
+        // rewriting - only the pack itself, and only if it changed kind.
+        const kind = m.pack || DEFAULT_PACK;
+        if (n.packKey !== kind) {
+          n.packKey = kind;
+          n.pack.innerHTML = ART.pack(kind);
+        }
+        return;
+      }
+
+      n.packKey = null;
+
+      const prog = Math.min(Engine.missionProgress(m), m.amount);
       n.text.textContent  = Engine.missionText(m);
-      n.count.textContent = Fmt.n(prog) + ' / ' + Fmt.n(m.amount);
-      n.chest.innerHTML = done ? ART.chest(m.chest || DEFAULT_CHEST) : '<span class="task-lock">🔒</span>';
+      // Opening a row has no count to show - "0 / 1" says nothing, and
+      // the row itself is already spelling out what it needs.
+      n.count.textContent = m.type === 'unlock'
+        ? ''
+        : taskCount(prog) + '/' + taskCount(m.amount);
       n.fill.style.width  = (prog / m.amount * 100).toFixed(1) + '%';
-      n.root.classList.toggle('done', done);
-      n.chest.disabled = !done;
+
+      const key = m.type + ':' + (m.tier || '');
+      if (n.goalKey !== key) {
+        n.goalKey = key;
+        n.goal.innerHTML = missionIcon(m);
+      }
     });
   }
 
@@ -459,7 +560,11 @@ const UI = (function () {
 
       const q = Engine.buyQuote(t.id);
       n.label.textContent = 'BUY x' + Fmt.whole(q.count) + ' RACCOON' + (q.count > 1 ? 'S' : '');
-      n.cost.innerHTML = '🦝 ' + Fmt.whole(q.ratoni) + ' · ♻️ ' + Fmt.n(q.plastic);
+      // Only the plastic. A raccoon costs exactly one raccoon, so the
+      // 🦝 half of this badge was always the same number as the "x1.23 M"
+      // in the label beside it - and the two of them together were what
+      // pushed the price off the end of the button on a phone.
+      n.cost.innerHTML = '♻️ ' + Fmt.n(q.plastic);
       n.buy.disabled = !q.can;
     });
   }
@@ -478,7 +583,7 @@ const UI = (function () {
       if (!known) {
         n.lvl.textContent = mgr.passive && S.level < mgr.fromLevel
           ? 'from level ' + mgr.fromLevel
-          : 'from chests';
+          : 'from packs';
         n.fill.setAttribute('width', 0);
       } else if (mgr.passive) {
         n.lvl.textContent = 'Lv ' + lvl + ' · x' + Fmt.n(passiveMultFor(lvl));
@@ -552,19 +657,19 @@ const UI = (function () {
     }).join('');
   }
 
-  // The chest is shown shut, throws its lid open, and only then do the
-  // cards fly out. Without that beat it reads as a list, not a prize.
+  // The pack is shown sealed, the foil is ripped off, and only then do
+  // the cards fly out. Without that beat it reads as a list, not a prize.
   function openingModal(loot, title, subtitle, buttonText) {
     const box = modal(
       '<h2>' + title + '</h2>' +
       '<p>' + subtitle + '</p>' +
-      '<div class="chest-stage">' + ART.chest(loot.chest.id) + '</div>' +
+      '<div class="pack-stage">' + ART.pack(loot.pack.id) + '</div>' +
       '<div class="modal-cards pending"></div>' +
       '<div class="loot-stars pending">+' + Fmt.n(loot.stars) + ' ⭐</div>' +
       '<button class="btn pending" data-close>' + buttonText + '</button>'
     );
 
-    const stage = box.querySelector('.chest-stage');
+    const stage = box.querySelector('.pack-stage');
     setTimeout(function () { stage.classList.add('open'); Sfx.pick(); }, 260);
     setTimeout(function () {
       box.querySelector('.modal-cards').innerHTML = lootCards(loot);
@@ -577,13 +682,13 @@ const UI = (function () {
     });
   }
 
-  function chestModal(loot) {
-    openingModal(loot, loot.chest.name, 'Raccoon cards for the alley', 'NICE');
+  function packModal(loot) {
+    openingModal(loot, loot.pack.name, 'Raccoon cards for the alley', 'NICE');
   }
 
   function rankModal(loot) {
     openingModal(loot, 'LEVEL ' + S.level,
-      'The alley is cleared out and starts again — harder tasks, richer chests.<br>' +
+      'The alley is cleared out and starts again — harder tasks, richer packs.<br>' +
       'Your raccoons, their cards and every star stay with you.',
       'LET US GO AGAIN');
   }
@@ -632,7 +737,7 @@ const UI = (function () {
         ? 'Lv ' + lvl + ' · ' + (m.passive
             ? 'x' + Fmt.n(passiveMultFor(lvl))
             : (Engine.isInstant(t) ? 'INSTANT' : Fmt.secs(Engine.cycleTime(t))))
-        : (m.passive && S.level < m.fromLevel ? 'from level ' + m.fromLevel : 'from chests');
+        : (m.passive && S.level < m.fromLevel ? 'from level ' + m.fromLevel : 'from packs');
       pFill.setAttribute('width',
         (Math.min(1, S.cards[id] / needCards) * CARDS.BAR_W).toFixed(1));
     }
@@ -730,7 +835,7 @@ const UI = (function () {
   }
 
   return {
-    build: build, refresh: refresh, show: show,
+    build: build, refresh: refresh, refreshBars: refreshBars, show: show,
     offlineModal: offlineModal, closeModal: closeModal,
   };
 })();

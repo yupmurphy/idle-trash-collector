@@ -28,9 +28,12 @@ const CARDS = (function () {
                '-3 20-14 30-38 32-52 5-116 5-166-1-22-3-32-14-32-36-1-40 2-112 6-138' +
                ' 2-14 6-20 6-23z';
 
+  // The same rarity ladder the packs use. Epic is ready for the cards
+  // that are coming; nothing carries it yet.
   const FRAME = {
     common: { frame: '#c9d2de', a: '#dfe5ec', b: '#b3bdcb', c: '#8b98ab', label: '#9aa4b2' },
     rare:   { frame: '#4ec3ff', a: '#a8f0ff', b: '#4ec3ff', c: '#2b7fd4', label: '#3f9fd6' },
+    epic:   { frame: '#b07cff', a: '#e2d0ff', b: '#b07cff', c: '#6d3fb8', label: '#9b6ae8' },
   };
 
   // Gradients and clip paths need ids, and several cards live on the

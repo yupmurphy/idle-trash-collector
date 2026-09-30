@@ -25,8 +25,8 @@
 //      🦝 raccoons - one per assignment, they tick in on their own
 //      ♻️ plastic  - the price of an assignment, flat per row
 //      ⭐ stars    - manager upgrades. Come from assignment milestones
-//                    and from chests.
-//      🃏 cards    - manager upgrades too. Chests only.
+//                    and from packs.
+//      🃏 cards    - manager upgrades too. Packs only.
 // =====================================================================
 
 const CFG = {
@@ -115,8 +115,8 @@ function starReward(step)    { return Math.pow(2, step); }
 //  cycle on the spot, and every level after that halves it again.
 //  Rare ones run nothing. They sit in the collection and bend a rule of
 //  the whole game for as long as you own them, and every level doubles
-//  what they bend. They join the chest pool at , so the
-//  chests keep changing as the game goes on.
+//  what they bend. They join the pack pool at , so the
+//  packs keep changing as the game goes on.
 //
 //  Drop chances come from RARITY below - a rare card is five times
 //  harder to pull than a common one.
@@ -158,9 +158,15 @@ const MANAGERS = [
   },
 ];
 
+// Weight is the slice of the draw wheel, so a rare is five times harder
+// to pull than a common and an epic twenty times.
+// Epic is defined and drawn but no manager carries it yet - give one
+// `rarity: 'epic'` and the wheel, the card frame and the modal all
+// follow on their own.
 const RARITY = {
-  common: { name: 'Common', weight: 10, colour: '#8fa0c0' },
-  rare:   { name: 'Rare',   weight: 2,  colour: '#4aa8ff' },
+  common: { name: 'Common', weight: 10,  colour: '#8fa0c0' },
+  rare:   { name: 'Rare',   weight: 2,   colour: '#4aa8ff' },
+  epic:   { name: 'Epic',   weight: 0.5, colour: '#b07cff' },
 };
 
 // What one level of a passive card multiplies its effect by.
@@ -172,7 +178,7 @@ function cardsForLevel(level) { return 10 * Math.pow(2, level - 1); }   // 10, 2
 
 // --------------------------------------------------------------------
 //  LEVELS
-//  A level is one run through the zone. Every chest you open fills one
+//  A level is one run through the zone. Every pack you open fills one
 //  box on the rank bar; fill the bar and RANK UP is yours whenever you
 //  want it. Ranking up wipes the zone and starts it again, harder and
 //  richer - managers, their cards and your stars come with you.
@@ -182,93 +188,164 @@ function cardsForLevel(level) { return 10 * Math.pow(2, level - 1); }   // 10, 2
 // --------------------------------------------------------------------
 const LEVELS = {
   slotsBase: 8,     // boxes on the rank bar at level 1
-  slotsMax:  13,    // and the most it ever grows to
+  slotsPerLevel: 2, // and how many more each level after that
+  slotsMax:  18,    // and the most it ever grows to
   extraTasks: 2,    // tasks beyond the bar, for anyone who wants them
 
-  // Chests pay Z + (level x 2)% more with every level.
+  // Packs pay Z + (level x 2)% more with every level.
   lootPerLevel: 0.02,
 
-  // Tasks that count a resource double with every level. Tasks counting
-  // raccoons on a row are left alone - those are tied to the unlock
-  // thresholds, which do not move.
-  taskScalePerLevel: 2,
+  // How much harder each level's targets get. See missionAt() in
+  // engine.js for why these two are so far apart - in short, plastic
+  // targets have to outrun an engine that compounds between levels,
+  // while raccoon targets are rate-limited and are what actually sets
+  // how long a level lasts.
+  //
+  // These two numbers are the difficulty dial for the whole game. Change
+  // one and re-run `node tools/sim.js 8` before believing anything.
+  taskScalePerLevel:   14,
+  assignScalePerLevel: 1.55,
 };
 
+// How many packs a level needs. This grows by two rather than one
+// because of extraTasks: a level always deals two tasks more than the
+// bar needs, and the two a player skips are always the two deepest.
+// Growing the bar by one per level meant the bar filled on the shallow
+// half of the ladder every time, and the deep rows - the only ones that
+// cost anything - were never required at all.
 function rankSlots(level) {
-  return Math.min(LEVELS.slotsMax, LEVELS.slotsBase + level - 1);
+  return Math.min(LEVELS.slotsMax, LEVELS.slotsBase + (level - 1) * LEVELS.slotsPerLevel);
 }
 
+// Never deal past the end of the written ladder. Beyond it the game
+// falls back to endless "collect N plastic" tasks, and those are the
+// cheapest thing in the game by a wide margin - so once a level dealt
+// them, the player simply skipped the canister task instead and the
+// level collapsed. At the top of the curve the bar needs the whole
+// ladder and there is nothing left to skip, which is the intent.
 function tasksInLevel(level) {
-  return rankSlots(level) + LEVELS.extraTasks;
+  return Math.min(MISSIONS.length, rankSlots(level) + LEVELS.extraTasks);
 }
 
 // --------------------------------------------------------------------
-//  CHESTS
-//  Every task pays out a chest. The plain one is the Simple Chest; the
-//  ranges below are rolled fresh each time it is opened, so two chests
-//  are never quite the same.
+//  PACKS
+//  Every task pays out a pack. The plain one is the Simple Pack; the
+//  ranges below are rolled fresh each time one is torn open, so two
+//  packs are never quite the same.
 // --------------------------------------------------------------------
-const CHESTS = {
-  simple: { id: 'simple', name: 'Simple Chest', emoji: '🎁',
+const PACKS = {
+  simple: { id: 'simple', name: 'Simple Pack', emoji: '🎁',
             stars: [40, 60],   cards: [6, 12] },
 
   // what ranking up pays out
-  rank:   { id: 'rank',   name: 'Rank Chest',   emoji: '🏆',
+  rank:   { id: 'rank',   name: 'Rank Pack',   emoji: '🏆',
             stars: [200, 320], cards: [24, 36] },
 };
 
-const DEFAULT_CHEST = 'simple';
+const DEFAULT_PACK = 'simple';
 
 // --------------------------------------------------------------------
 //  MISSIONS - three on screen at a time
 //  {n} in a text is filled in with that task's target, so a task can be
 //  scaled for a higher level without rewriting its wording.
-//  Each one finished turns into a chest you claim in place, and the
+//  Each one finished turns into a pack you claim in place, and the
 //  slot deals the next mission off the list.
 //    'plastic'  total plastic ever collected
 //    'assign'   raccoons assigned to a row
 //    'collect'  items ever collected on a row
 //    'manager'  managers hired
 //    'stars'    stars ever earned
+//    'unlock'   a row is open at all - done or not done, never a count
 // --------------------------------------------------------------------
+//  THE LIST IS EXACTLY AS LONG AS IT CAN BE. A level deals
+//  tasksInLevel(level) tasks and that caps at slotsMax + extraTasks,
+//  so index 14 is the last one the game can ever reach. Entries past it
+//  are dead - which is how mgr_fancy's guaranteed grant sat at index 15
+//  and never fired, leaving Fancy the only manager you could not be sure
+//  of meeting. Adding a task means raising slotsMax, not just appending.
 const MISSIONS = [
-  { type: 'plastic', amount: 200,  grant: 'mgr_tato', text: 'Collect {n} plastic' },
-  { type: 'assign',  tier: 'bag',    amount: 50,   text: 'Put {n} raccoons on bags' },
-  { type: 'collect', tier: 'bag',    amount: 4e3,  text: 'Haul {n} plastic out of the bag pile' },
-  { type: 'assign',  tier: 'bag',    amount: 75,   text: 'Put {n} raccoons on bags' },
-  { type: 'plastic', amount: 1e5,   text: 'Collect {n} plastic' },
-  { type: 'assign',  tier: 'bag',    amount: 100,  grant: 'mgr_grumpy', text: 'Put {n} raccoons on bags' },
-  { type: 'assign',  tier: 'straw',  amount: 20,   text: 'Put {n} raccoons on straws' },
-  { type: 'manager', amount: 2,     text: 'Hire {n} raccoon managers' },
-  { type: 'plastic', amount: 2e7,   text: 'Collect {n} plastic' },
-  { type: 'assign',  tier: 'straw',  amount: 1e3,  text: 'Get {n} raccoons on straws' },
-  { type: 'stars',   amount: 1e3,   text: 'Earn {n} stars' },
-  { type: 'assign',  tier: 'straw',  amount: 5e3,  grant: 'mgr_scary', text: 'Get {n} raccoons on straws' },
-  { type: 'assign',  tier: 'bottle', amount: 200,  text: 'Put {n} raccoons on bottles' },
-  { type: 'plastic', amount: 2e11,  text: 'Collect {n} plastic' },
-  { type: 'assign',  tier: 'bottle', amount: 2e4,  text: 'Get {n} raccoons on bottles' },
-  { type: 'assign',  tier: 'bottle', amount: 1e5,  grant: 'mgr_fancy', text: 'Get {n} raccoons on bottles' },
-  { type: 'assign',  tier: 'can',    amount: 200,  text: 'Put {n} raccoons on canisters' },
-  { type: 'manager', amount: 4,     text: 'Hire {n} raccoon managers' },
+  // ---- bags, and the raccoon who takes them over ----
+  { type: 'plastic', amount: 3500, grant: 'mgr_tato', text: 'Collect {n}' },
+  { type: 'assign',  tier: 'bag',    amount: 80,    text: '{n} on bags' },
+  { type: 'collect', tier: 'bag',    amount: 5e5,   text: 'Haul {n}' },
+  { type: 'assign',  tier: 'bag',    amount: 550,   text: '{n} on bags' },
+  { type: 'plastic', amount: 1.2e8,  text: 'Collect {n}' },
+
+  // ---- straws ----
+  //  ONLY THE DEEPEST OPEN ROW IS EVER SCARCE. Every row below it is
+  //  refilled for free by the one above - a straw raccoon comes home
+  //  dragging a bag raccoon - so a target on a shallow row stops costing
+  //  anything the moment the row above it is running.
+  //
+  //  So the ladder takes ONE step per row and then moves down. The old
+  //  list asked for bag raccoons three times and straw raccoons three
+  //  times; every repeat after the first was free, and levels finished
+  //  in two minutes however big the numbers got. A level is only ever as
+  //  long as its DEEPEST task.
+  { type: 'assign',  tier: 'straw',  amount: 400,   grant: 'mgr_grumpy', text: '{n} on straws' },
+  { type: 'assign',  tier: 'straw',  amount: 2000,  text: '{n} on straws' },
+  { type: 'manager', amount: 2,      text: 'Hire {n} managers' },
+  { type: 'assign',  tier: 'straw',  amount: 2500,  text: '{n} on straws' },
+  { type: 'plastic', amount: 2e9,    text: 'Collect {n}' },
+
+  // ---- rank 3 ends here: the bottles open ----
+  //  Both straw targets above stay under the bottle row's 5 K unlock,
+  //  even once the per-level scaling has had two goes at them, so the
+  //  pile really is shut until this task - opening it is an event, not
+  //  a formality that already happened three tasks ago.
+  { type: 'unlock',  tier: 'bottle', amount: 1, grant: 'mgr_scary', text: 'Open the bottles' },
+  { type: 'assign',  tier: 'bottle', amount: 100,   text: '{n} on bottles' },
+
+  // ---- rank 4 and up: bottles get deep ----
+  { type: 'assign',  tier: 'bottle', amount: 8e3,   text: '{n} on bottles' },
+  { type: 'stars',   amount: 1500,   text: 'Earn {n} stars' },
+  { type: 'assign',  tier: 'bottle', amount: 2.5e4, text: '{n} on bottles' },
+
+  // ---- rank 5 and up: the canisters ----
+  { type: 'unlock',  tier: 'can',    amount: 1, grant: 'mgr_fancy', text: 'Open the canisters' },
+  { type: 'assign',  tier: 'can',    amount: 200,   text: '{n} on canisters' },
+  { type: 'manager', amount: 4,      text: 'Hire {n} managers' },
+  // NEXT: the zone 2 unlock belongs here, as an 'unlock' task on the
+  // first row of the household-waste page - the last task of the run
+  // that opens it.
 ];
 
-// Once the written list runs out the game keeps dealing, so the chests
+// Once the written list runs out the game keeps dealing, so the packs
 // never stop while you wait for the next zone.
 function endlessMission(index) {
   const amount = 1e14 * Math.pow(100, index);
   return { type: 'plastic', amount: amount,
-           text: 'Collect {n} plastic' };
+           text: 'Collect {n}' };
 }
 
 const MISSION_SLOTS = 3;
 
 // --------------------------------------------------------------------
 //  DEALS - permanent raccoons/sec, paid for in plastic
-//  Every step bought is a flat +1 per second. The price is what climbs.
+//
+//  Raccoon supply is what gates the deep rows: nothing feeds the deepest
+//  open row, so every raccoon standing on it had to walk in. The Scrap
+//  Deal alone can never keep up - it pays a flat +1/sec for a price that
+//  multiplies by 100, so by the fourth step it is worthless and supply
+//  sits near 4/sec while plastic runs away exponentially. Canisters then
+//  sit behind 100,000 bottle raccoons that cannot be bought in any sane
+//  time, and high levels simply never finish.
+//
+//  Raising the Scrap Deal does not fix it. That deal is gated on PLASTIC
+//  and level 1 is already rich, so a bigger one floods the early game
+//  and levels 1-4 collapse to two minutes each. Measured, not guessed:
+//  gainMul 3 took level 4 from 33 minutes to under 3.
+//
+//  So supply is gated on DEPTH instead. The Night Haul exists only once
+//  the bottle row is open, which cannot happen until the straws are
+//  deep - it scales the late game without touching the early one.
 // --------------------------------------------------------------------
 const TRADES = [
   { id: 'tr_scrap', ico: '♻️', name: 'Scrap Deal',
     costBase: 500, costMul: 100, gainBase: 1, gainMul: 1, needs: null },
+
+  { id: 'tr_night', ico: '🌙', name: 'Night Haul',
+    costBase: 1e11, costMul: 50, gainBase: 25, gainMul: 4, needs: 'bottle' },
 ];
 
 const ZONE_NAME = 'Zone 1 · Plastic Quarter';
