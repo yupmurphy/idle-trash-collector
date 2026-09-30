@@ -36,6 +36,39 @@ tools/sim.js   plays the game headless and times each rank
 Rebuilding the rows fifteen times a second would kill the tap animation and
 the scroll position.
 
+## What the parts are called
+
+Every name below is a real id or class in `index.html`, `style.css` and
+`ui.js`. It is here so a change can be asked for by pointing at the screen
+rather than by describing it — "the count on the task bar" is one grep away
+from `.task-count`, where "the little numbers up top" is not.
+
+Top to bottom:
+
+| what you see | what it is called | in the code |
+| --- | --- | --- |
+| the top strip, raccoon avatar to ☰ | the **header** | `#top` |
+| the 🦝 ⭐ 🃏 pills in it | **chips** | `.coin` |
+| LEVEL 1 and the amber boxes | the **rank bar**, and **rank boxes** | `#rank`, `.rank-box` |
+| the band of three missions | the **task band** | `#tasks` |
+| one of those three | a **task cell** | `.task` |
+| its icon, wording, bar, and the count on the bar | — | `.task-goal`, `.task-text`, `.task-bar`, `.task-count` |
+| the pack and CLICK TO CLAIM | the cell's **claim face** | `.task-claim`, `.task-pack` |
+| ♻️ and the amount you hold | the **resource bar**, holding **resource boxes** | `#res-bar`, `.res` |
+| the x1 / 10% / 50% / MAX button | the **buy step** | `#btn-bulk` |
+| everything that scrolls | the **pages** | `#pages` |
+| "Zone 1 · Plastic Quarter" | the **page title** | `.zone-bar` |
+| one whole trash panel | a **row** | `.row` |
+| the circle you tap | — | `.row-tap` |
+| its green bar and the seconds on it | — | `.row-bar`, `.row-timer` |
+| the big green BUY button | the **buy button**, its label and its price | `.buy-btn`, `.buy-label`, `.buy-cost` |
+| COLLECT / MANAGERS / DEN at the bottom | the **nav** | `#nav` |
+
+The distinction that comes up most: the three things at the top are **cells**,
+the trash panels below are **rows**, and the pills in the header are **chips**.
+All three are boxes with a number in them, and calling the wrong one "the box"
+sends the change to the wrong file.
+
 ## How the game works
 
 ### The chain
